@@ -23,7 +23,7 @@ struct Time_Info {
     double accumulated_fps_dt = 0.0;
     double fps_dt = 0.0;
     
-    int fps_cap = 60;
+    int fps_cap = 120;
 };
 
 struct Global_Variables {

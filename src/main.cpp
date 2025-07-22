@@ -94,6 +94,12 @@ static void draw_debug_hud() {
     int fps = 0;
     if (globals.time_info.fps_dt > 0.0) {
         fps = (int)(1.0 / globals.time_info.fps_dt);
+
+        // Lower the fps limit if the user's machine can't hit the required fps.
+        // @TODO: Put this somewhere better not fucking draw_debug_hud ffs.
+        if (fps < globals.time_info.fps_cap) {
+            globals.time_info.fps_cap /= 2;
+        }
     }
     
     int font_size = (int)(0.03f * globals.render_height);

@@ -80,3 +80,5 @@ char *read_entire_file(char *filepath, s64 *length_pointer = NULL, bool zero_ter
 
 char *break_by_space(char *s);
 char *break_by_comma(char *s);
+
+float fract(float value);

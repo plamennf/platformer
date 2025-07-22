@@ -22,3 +22,4 @@ Shader *get_current_shader();
 void refresh_transform();
 
 void rendering_2d(int width, int height);
+void rendering_2d(int width, int height, Matrix4 world_to_view_matrix);

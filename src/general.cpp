@@ -319,3 +319,9 @@ char *break_by_comma(char *s) {
 
     return end;
 }
+
+float fract(float value) {
+    int intvalue = (int)value;
+    float fractpart = value - intvalue;
+    return fractpart;
+}

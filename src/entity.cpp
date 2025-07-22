@@ -49,7 +49,7 @@ void update_single_hero(Hero *hero, float dt) {
         u8 tile1_id = get_tile_id_at(tilemap, v2(new_position.x + hero->size.x, hero->position.y));
         u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x + hero->size.x, hero->position.y + hero->size.y * 0.9f));
         if (is_tile_id_collidable(tilemap, tile1_id) || is_tile_id_collidable(tilemap, tile2_id)) {
-            new_position.x = (int)new_position.x;
+            new_position.x = static_cast <float>((int)new_position.x);
             hero->velocity.x = 0.0f;
         }
     }
@@ -58,7 +58,7 @@ void update_single_hero(Hero *hero, float dt) {
         u8 tile1_id = get_tile_id_at(tilemap, v2(new_position.x, new_position.y + hero->size.y));
         u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x + 0.9f * hero->size.x, new_position.y + hero->size.y));
         if (is_tile_id_collidable(tilemap, tile1_id) || is_tile_id_collidable(tilemap, tile2_id)) {
-            new_position.y = (int)new_position.y;
+            new_position.y = static_cast <float>((int)new_position.y);
             hero->velocity.y = 0.0f;
         }
     } else {
@@ -72,7 +72,7 @@ void update_single_hero(Hero *hero, float dt) {
     }
 
     hero->position = new_position;
-    
+
     if (hero->position.y <= 0.0f) {
         hero->position.y   = 0.0f;
         hero->velocity.y   = 0.0f;
@@ -81,6 +81,10 @@ void update_single_hero(Hero *hero, float dt) {
 
     if (hero->position.x < 0.0f) {
         hero->position.x = 0.0f;
+    }
+
+    if (hero->position.x > world->size.x - hero->size.x) {
+        hero->position.x = world->size.x - hero->size.x;
     }
     
     if (!hero->is_on_ground) {

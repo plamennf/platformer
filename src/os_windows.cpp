@@ -353,12 +353,12 @@ void *os_create_opengl_context(Window_Type window, int version_major, int versio
 
             // uncomment for sRGB framebuffer, from WGL_ARB_framebuffer_sRGB extension
             // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_framebuffer_sRGB.txt
-            //WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, GL_TRUE,
+            WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB, GL_TRUE,
         
             // uncomment for multisampeld framebuffer, from WGL_ARB_multisample extension
             // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_multisample.txt
-            //WGL_SAMPLE_BUFFERS_ARB, 1,
-            //WGL_SAMPLES_ARB,        4, // 4x MSAA
+            // WGL_SAMPLE_BUFFERS_ARB, 1,
+            // WGL_SAMPLES_ARB,        4, // 4x MSAA
 
             0,
         };

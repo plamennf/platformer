@@ -3,6 +3,7 @@
 #include "entity.h"
 #include "rendering.h"
 #include "tilemap.h"
+#include "camera.h"
 
 #include "mt19937-64.h"
 
@@ -18,6 +19,8 @@ void update_world(World *world, float dt) {
     if (world->by_type._Hero) {
         update_single_hero(world->by_type._Hero, dt);
     }
+
+    update_camera(world->camera, world, dt);
 }
 
 void draw_world(World *world) {
@@ -27,7 +30,7 @@ void draw_world(World *world) {
     clear_framebuffer(0.2f, 0.5f, 0.8f, 1.0f);
 
     set_shader(globals.shader_color);
-    rendering_2d(globals.window_width, globals.window_height);
+    rendering_2d(globals.window_width, globals.window_height, get_world_to_view_matrix(world->camera, world));
 
     immediate_begin();
 

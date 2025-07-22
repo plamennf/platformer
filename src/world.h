@@ -6,6 +6,7 @@ const int VIEW_AREA_HEIGHT = 9;
 struct Entity;
 struct Hero;
 struct Tilemap;
+struct Camera;
 
 struct Entities_By_Type {
     Hero *_Hero = NULL;
@@ -17,6 +18,7 @@ struct World {
     Array <Entity *> all_entities;
 
     Tilemap *tilemap;
+    Camera *camera;
     
     Vector2i size;
 };

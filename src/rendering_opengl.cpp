@@ -50,6 +50,7 @@ bool init_rendering(Window_Type _window, bool vsync) {
 
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(GL_MULTISAMPLE);
+    //glEnable(GL_MULTISAMPLE);
 
     glGenBuffers(1, &immediate_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, immediate_vbo);

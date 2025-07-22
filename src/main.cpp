@@ -4,6 +4,7 @@
 #include "world.h"
 #include "entity.h"
 #include "tilemap.h"
+#include "camera.h"
 
 #define NS_PER_SECOND 1000000000.0
 
@@ -67,6 +68,13 @@ static void init_test_world() {
     hero->position = v2(0, 1);
     hero->size     = v2(1, 1);
     hero->color    = v4(1, 0, 1, 1);
+
+    globals.current_world->camera = new Camera();
+    globals.current_world->camera->position       = v2(0, 0);
+    globals.current_world->camera->target         = v2(0, 0);
+    globals.current_world->camera->following_id   = hero->id;
+    globals.current_world->camera->dead_zone_size = v2(VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT) * 0.1f;
+    globals.current_world->camera->smooth_factor  = 0.95f;
 }
 
 static void respond_to_input() {

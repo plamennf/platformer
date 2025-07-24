@@ -10,6 +10,9 @@ const float JUMP_FORCE = 15.0f;
 const float MAX_FALL_SPEED = -25.0f;
 const float FAST_FALL_MULTIPLIER = 1.5f;
 
+const double PROJECTILE_DAMAGE = 1.0;
+const double ENEMY_DAMAGE = 0.5;
+
 void update_single_hero(Hero *hero, float dt) {
     World *world = hero->world;
     assert(world);
@@ -37,7 +40,8 @@ void update_single_hero(Hero *hero, float dt) {
     hero->velocity.y = Max(hero->velocity.y, MAX_FALL_SPEED);
 
     Vector2 new_position = hero->position + hero->velocity * dt;
-
+    bool has_jumped_on_enemy = false;
+    
     if (hero->velocity.x <= 0.0f) {
         u8 tile1_id = get_tile_id_at(tilemap, v2(new_position.x, hero->position.y));
         u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x, hero->position.y + hero->size.y * 0.9f));
@@ -72,17 +76,35 @@ void update_single_hero(Hero *hero, float dt) {
 
         for (Enemy *enemy : world->by_type._Enemy) {
             Rectangle2 hero_rect = { hero->position.x, hero->position.y, hero->size.x, hero->size.y };
-            Rectangle2 enemy_rect = { enemy->position.x, enemy->position.y, enemy->size.x, enemy->size.y };
-            if (are_intersecting(hero_rect, enemy_rect) && !hero->is_on_ground) {
+            if (are_rect_and_circle_colliding(hero_rect, enemy->position, enemy->radius) && !hero->is_on_ground) {
                 schedule_for_destruction(enemy);
                 new_position.y = (int)new_position.y + 1.0f;
                 hero->velocity.y = JUMP_FORCE * 1.5f;
                 hero->is_on_ground = false;
+
+                has_jumped_on_enemy = true;
+                
                 break;
             }
         }
     }
 
+    if (!has_jumped_on_enemy) {
+        for (Enemy *enemy : world->by_type._Enemy) {
+            Rectangle2 hero_rect = { hero->position.x, hero->position.y, hero->size.x, hero->size.y };
+            Rectangle2 enemy_rect = { enemy->position.x, enemy->position.y, enemy->size.x, enemy->size.y };
+            if (are_rect_and_circle_colliding(hero_rect, enemy->position, enemy->radius)) {
+                if (hero->velocity.x <= 0.0f) {
+                    new_position.x = (int)new_position.x + enemy->radius * 3.0f;
+                } else {
+                    new_position.x = (int)new_position.x - enemy->radius;
+                }
+                hero->velocity.x = 0.0f;
+                damage_hero(hero, ENEMY_DAMAGE);
+            }
+        }
+    }
+    
     hero->position = new_position;
 
     if (hero->position.y <= 0.0f) {
@@ -104,7 +126,7 @@ void update_single_hero(Hero *hero, float dt) {
         if (projectile->scheduled_for_destruction) continue;
 
         if (are_rect_and_circle_colliding(hero_rect, projectile->position, projectile->radius)) {
-            damage_hero(hero, 0.5);
+            damage_hero(hero, PROJECTILE_DAMAGE);
             schedule_for_destruction(projectile);
         }
     }

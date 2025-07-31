@@ -10,9 +10,11 @@ struct Camera;
 struct Enemy;
 struct Projectile;
 struct Pickup;
+struct Door;
 
 struct Entities_By_Type {
     Hero *_Hero = NULL;
+    Door *_Door = NULL;
     Array <Enemy *> _Enemy;
     Array <Projectile *> _Projectile;
     Array <Pickup *> _Pickup;
@@ -24,6 +26,8 @@ struct World {
     Array <Entity *> all_entities;
 
     Array <Entity *> entities_to_be_destroyed;
+
+    int num_pickups_needed_to_unlock_door = 0;
     
     Tilemap *tilemap;
     Camera *camera;
@@ -42,6 +46,7 @@ Entity *get_entity_by_id(World *world, u64 id);
 void schedule_for_destruction(Entity *entity);
 
 Hero *make_hero(World *world);
+Door *make_door(World *world);
 Enemy *make_enemy(World *world);
 Projectile *make_projectile(World *world);
 Pickup *make_pickup(World *world);

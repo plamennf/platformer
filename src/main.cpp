@@ -125,6 +125,10 @@ static void init_test_world() {
     hero->size     = v2(1, 1);
     hero->color    = v4(1, 0, 1, 1);
 
+    Door *door     = make_door(globals.current_world);
+    door->position = v2(31, 12);
+    door->size     = v2(1, 2);
+    
     globals.current_world->camera                 = new Camera();
     globals.current_world->camera->position       = v2(0, 0);
     globals.current_world->camera->target         = v2(0, 0);
@@ -140,6 +144,8 @@ static void init_test_world() {
     pickup->position = v2(25.5f, 6.5f);
     pickup->color    = v4(1.0f, 1.0f, 0.0f, 1.0f);
     pickup->radius   = 0.5f;
+
+    globals.current_world->num_pickups_needed_to_unlock_door = globals.current_world->by_type._Pickup.count;
 }
 
 static void respond_to_input() {

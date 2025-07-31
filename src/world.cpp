@@ -34,6 +34,14 @@ void update_world(World *world, float dt) {
     if (world->by_type._Hero) {
         if (!world->by_type._Hero->scheduled_for_destruction) {
             update_single_hero(world->by_type._Hero, dt);
+
+            if (world->by_type._Door) {
+                if (!world->by_type._Door->scheduled_for_destruction) {
+                    if (world->by_type._Hero->num_pickups >= world->num_pickups_needed_to_unlock_door) {
+                        world->by_type._Door->locked = false;
+                    }
+                }
+            }
         }
     }
 
@@ -66,6 +74,14 @@ void update_world(World *world, float dt) {
 
             case ENTITY_TYPE_PROJECTILE: {
                 world->by_type._Projectile.ordered_remove_by_value((Projectile *)e);
+            } break;
+
+            case ENTITY_TYPE_PICKUP: {
+                world->by_type._Pickup.ordered_remove_by_value((Pickup *)e);
+            } break;
+
+            case ENTITY_TYPE_DOOR: {
+                world->by_type._Door = NULL;
             } break;
         }
 
@@ -108,6 +124,11 @@ void draw_world(World *world) {
         if (pickup->scheduled_for_destruction) continue;
 
         draw_single_pickup(pickup);
+    }
+
+    Door *door = world->by_type._Door;
+    if (door && !door->scheduled_for_destruction) {
+        draw_single_door(door);
     }
     
     Hero *hero = world->by_type._Hero;
@@ -209,6 +230,15 @@ Hero *make_hero(World *world) {
     register_entity(world, hero, ENTITY_TYPE_HERO);
 
     return hero;
+}
+
+Door *make_door(World *world) {
+    Door *door = new Door();
+
+    world->by_type._Door = door;
+    register_entity(world, door, ENTITY_TYPE_DOOR);
+
+    return door;
 }
 
 Enemy *make_enemy(World *world) {

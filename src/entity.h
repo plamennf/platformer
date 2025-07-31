@@ -8,6 +8,7 @@ enum Entity_Type {
     ENTITY_TYPE_ENEMY,
     ENTITY_TYPE_PROJECTILE,
     ENTITY_TYPE_PICKUP,
+    ENTITY_TYPE_DOOR,
 };
 
 struct Entity {
@@ -68,3 +69,9 @@ struct Pickup : public Entity {
 };
 
 void draw_single_pickup(Pickup *pickup);
+
+struct Door : public Entity {
+    bool locked = true;
+};
+
+void draw_single_door(Door *door);

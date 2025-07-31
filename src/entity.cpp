@@ -343,3 +343,16 @@ void draw_single_pickup(Pickup *pickup) {
 
     immediate_circle(screen_space_position, screen_space_size.y, pickup->color);
 }
+
+void draw_single_door(Door *door) {
+    World *world = door->world;
+    assert(world);
+
+    Vector2 screen_space_position = world_space_to_screen_space(world, door->position);
+    Vector2 screen_space_size     = world_space_to_screen_space(world, door->size);
+
+    Vector4 color = v4(0, 1, 0, 1);
+    if (door->locked) color = v4(1, 0, 0, 1);
+
+    immediate_quad(screen_space_position, screen_space_size, color);
+}

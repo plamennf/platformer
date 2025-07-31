@@ -9,11 +9,13 @@ struct Tilemap;
 struct Camera;
 struct Enemy;
 struct Projectile;
+struct Pickup;
 
 struct Entities_By_Type {
     Hero *_Hero = NULL;
     Array <Enemy *> _Enemy;
     Array <Projectile *> _Projectile;
+    Array <Pickup *> _Pickup;
 };
 
 struct World {
@@ -42,3 +44,4 @@ void schedule_for_destruction(Entity *entity);
 Hero *make_hero(World *world);
 Enemy *make_enemy(World *world);
 Projectile *make_projectile(World *world);
+Pickup *make_pickup(World *world);

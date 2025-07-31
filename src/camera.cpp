@@ -47,8 +47,8 @@ Matrix4 get_world_to_view_matrix(Camera *camera, World *world) {
     Vector2 position = camera->position - v2(VIEW_AREA_WIDTH * 0.5f, VIEW_AREA_HEIGHT * 0.5f);
     Vector2 screen_space_position = world_space_to_screen_space(world, position);
 
-    screen_space_position.x = static_cast <float>((int)screen_space_position.x);
-    screen_space_position.y = static_cast <float>((int)screen_space_position.y);
+    screen_space_position.x = roundf(screen_space_position.x);
+    screen_space_position.y = roundf(screen_space_position.y);
     
     m._14 = -screen_space_position.x;
     m._24 = -screen_space_position.y;

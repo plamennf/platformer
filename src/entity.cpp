@@ -130,6 +130,15 @@ void update_single_hero(Hero *hero, float dt) {
             schedule_for_destruction(projectile);
         }
     }
+
+    for (Pickup *pickup : world->by_type._Pickup) {
+        if (pickup->scheduled_for_destruction) continue;
+
+        if (are_rect_and_circle_colliding(hero_rect, pickup->position, pickup->radius)) {
+            hero->num_pickups++;
+            schedule_for_destruction(pickup);
+        }
+    }
     
     if (!hero->is_on_ground) {
         if (hero->velocity.y > 0.0f) {
@@ -323,4 +332,14 @@ void draw_single_projectile(Projectile *projectile) {
     Vector2 screen_space_size     = world_space_to_screen_space(world, v2(0, projectile->radius));
 
     immediate_circle(screen_space_position, screen_space_size.y, projectile->color);    
+}
+
+void draw_single_pickup(Pickup *pickup) {
+    World *world = pickup->world;
+    assert(world);
+
+    Vector2 screen_space_position = world_space_to_screen_space(world, pickup->position);
+    Vector2 screen_space_size     = world_space_to_screen_space(world, v2(0, pickup->radius));
+
+    immediate_circle(screen_space_position, screen_space_size.y, pickup->color);
 }

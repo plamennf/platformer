@@ -135,6 +135,11 @@ static void init_test_world() {
     Enemy *enemy    = make_enemy(globals.current_world);
     enemy->position = v2(10, 1.5f);
     enemy->color    = v4(1, 1, 1, 1);
+
+    Pickup *pickup   = make_pickup(globals.current_world);
+    pickup->position = v2(25.5f, 6.5f);
+    pickup->color    = v4(1.0f, 1.0f, 0.0f, 1.0f);
+    pickup->radius   = 0.5f;
 }
 
 static void respond_to_input() {

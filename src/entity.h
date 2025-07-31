@@ -7,6 +7,7 @@ enum Entity_Type {
     ENTITY_TYPE_HERO,
     ENTITY_TYPE_ENEMY,
     ENTITY_TYPE_PROJECTILE,
+    ENTITY_TYPE_PICKUP,
 };
 
 struct Entity {
@@ -33,6 +34,7 @@ struct Hero : public Entity {
     bool is_facing_right = true;
     bool is_on_ground = true;
     double health = 3.0;
+    int num_pickups = 0;
 };
 
 void update_single_hero(Hero *hero, float dt);
@@ -60,3 +62,9 @@ struct Projectile : public Entity {
 
 void update_single_projectile(Projectile *projectile, float dt);
 void draw_single_projectile(Projectile *projectile);
+
+struct Pickup : public Entity {
+    float radius = 0.5f;
+};
+
+void draw_single_pickup(Pickup *pickup);

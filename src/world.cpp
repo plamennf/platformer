@@ -103,6 +103,12 @@ void draw_world(World *world) {
 
         draw_single_projectile(projectile);
     }
+
+    for (Pickup *pickup : world->by_type._Pickup) {
+        if (pickup->scheduled_for_destruction) continue;
+
+        draw_single_pickup(pickup);
+    }
     
     Hero *hero = world->by_type._Hero;
     if (hero && !hero->scheduled_for_destruction) {
@@ -130,6 +136,11 @@ void draw_world(World *world) {
         !world->by_type._Hero) {
         color = v4(1, 0, 0, 1);
     }
+    draw_text(font, text, x, y, color);
+
+    y -= font->character_height;
+    snprintf(text, sizeof(text), "Pickups: %d", world->by_type._Hero ? world->by_type._Hero->num_pickups : 0);
+    color = v4(1, 1, 0, 1);
     draw_text(font, text, x, y, color);
 }
 
@@ -216,6 +227,15 @@ Projectile *make_projectile(World *world) {
     register_entity(world, projectile, ENTITY_TYPE_PROJECTILE);
 
     return projectile;
+}
+
+Pickup *make_pickup(World *world) {
+    Pickup *pickup = new Pickup();
+
+    world->by_type._Pickup.add(pickup);
+    register_entity(world, pickup, ENTITY_TYPE_PICKUP);
+
+    return pickup;
 }
 
 void schedule_for_destruction(Entity *entity) {

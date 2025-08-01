@@ -130,7 +130,7 @@ static void init_test_world() {
     door->size     = v2(1, 2);
     
     globals.current_world->camera                 = new Camera();
-    globals.current_world->camera->position       = v2(0, 0);
+    globals.current_world->camera->position       = v2(18, 9);
     globals.current_world->camera->target         = v2(0, 0);
     globals.current_world->camera->following_id   = hero->id;
     globals.current_world->camera->dead_zone_size = v2(VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT) * 0.1f;
@@ -192,7 +192,11 @@ int main(int argc, char *argv[]) {
     init_shaders();
     init_framebuffer();
 
-    init_test_world();
+    //init_test_world();
+    globals.current_world = new World();
+    if (!load_world_from_file(globals.current_world, "data/worlds/test.wrld")) {
+        return 1;
+    }
     
     globals.time_info.last_time = os_get_time_nanoseconds();
     u64 last_time = os_get_time_nanoseconds();

@@ -5,10 +5,13 @@
 #include "tilemap.h"
 #include "camera.h"
 #include "font.h"
+#include "text_file_handler.h"
 
 #include "mt19937-64.h"
 
 #include <stdio.h>
+
+#define WORLD_FILE_VERSION 1
 
 void init_world(World *world, Vector2i size) {
     unsigned long long init[] = {(u64)size.x, (u64)size.y};
@@ -274,4 +277,245 @@ void schedule_for_destruction(Entity *entity) {
 
     entity->scheduled_for_destruction = true;
     world->entities_to_be_destroyed.add(entity);
+}
+
+static Vector2 parse_vector2(char *s) {
+    Vector2 result = v2(0, 0);
+    if (!s) return result;
+
+    sscanf(s, "%f %f", &result.x, &result.y);
+    
+    return result;
+}
+
+static Vector4 parse_vector4(char *s) {
+    Vector4 result = v4(0, 0, 0, 0);
+    if (!s) return result;
+
+    sscanf(s, "%f %f %f %f", &result.x, &result.y, &result.z, &result.w);
+
+    return result;
+}
+
+bool load_world_from_file(World *world, char *filepath) {
+    Text_File_Handler handler;
+    if (!start_file(&handler, filepath)) return false;
+    defer { end_file(&handler); };
+    
+    if (handler.version < 1) {
+        report_error(&handler, "Invalid version number for a tilemap file!");
+        return false;
+    }
+
+    char *line = consume_next_line(&handler);
+    if (!line) {
+        report_error(&handler, "Expected width directive instead found end-of-file!");
+        return false;
+    }
+    if (!starts_with(line, "width")) {
+        report_error(&handler, "Expected width directive instead found '%s'!", line);
+        return false;
+    }
+    line += string_length("width");
+    line = eat_spaces(line);
+    line = eat_trailing_spaces(line);
+
+    int width = atoi(line);
+    if (width <= 0) {
+        report_error(&handler, "Width must be at least 1, but instead it is '%d'!", width);
+        return false;
+    }
+
+    line = consume_next_line(&handler);
+    if (!line) {
+        report_error(&handler, "Expected height directive instead found end-of-file!");
+        return false;
+    }
+    if (!starts_with(line, "height")) {
+        report_error(&handler, "Expected height directive instead found '%s'!", line);
+        return false;
+    }
+    line += string_length("height");
+    line = eat_spaces(line);
+    line = eat_trailing_spaces(line);
+
+    int height = atoi(line);
+    if (height <= 0) {
+        report_error(&handler, "Height must be at least 1, but instead it is '%d'!", height);
+        return false;
+    }
+
+    line = consume_next_line(&handler);
+    if (!line) {
+        report_error(&handler, "Expected tilemap directive instead found end-of-file!");
+        return false;
+    }
+    if (!starts_with(line, "tilemap")) {
+        report_error(&handler, "Expected tilemap directive instead found '%s'!", line);
+        return false;
+    }
+    line += string_length("tilemap");
+    line = eat_spaces(line);
+    line = eat_trailing_spaces(line);
+
+    world->size.x = width;
+    world->size.y = height;
+    
+    unsigned long long init[] = {(u64)width, (u64)height};
+    init_by_array64(init, ArrayCount(init));
+    
+    char *tilemap_filename = line;
+    char tilemap_fullpath[256];
+    snprintf(tilemap_fullpath, sizeof(tilemap_fullpath), "data/tilemaps/%s.tm", tilemap_filename);
+
+    world->tilemap = new Tilemap();
+    if (!load_tilemap(world->tilemap, tilemap_fullpath)) {
+        delete world->tilemap;
+        return false;
+    }
+    
+    Entity *current_entity = NULL;
+    Camera *current_camera = NULL;
+    for (;;) {
+        char *line = consume_next_line(&handler);
+        if (!line) break;
+
+        if (line[0] == '[') {
+            line++;
+
+            char *start = line;
+            while (*line && *line != ']') {
+                line++;
+            }
+
+            if (*line != ']') {
+                report_error(&handler, "Expected ']' after entity type");
+                return false;
+            }
+
+            start[line - start] = 0;
+
+            start = eat_spaces(start);
+            start = eat_trailing_spaces(start);
+
+            current_entity = NULL;
+            current_camera = NULL;
+            if (strings_match(start, "Camera")) {
+                current_camera = new Camera();
+                current_camera->position       = v2(18, 9);
+                current_camera->target         = v2(0, 0);
+                current_camera->dead_zone_size = v2(VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT) * 0.1f;
+                current_camera->smooth_factor  = 0.95f;
+
+                world->camera = current_camera;
+            } else if (strings_match(start, "Hero")) {
+                current_entity = make_hero(world);
+            } else if (strings_match(start, "Door")) {
+                current_entity = make_door(world);
+            } else if (strings_match(start, "Enemy")) {
+                current_entity = make_enemy(world);
+            } else if (strings_match(start, "Pickup")) {
+                current_entity = make_pickup(world);
+            }
+        } else if (starts_with(line, "position")) {
+            line += string_length("position");
+            line = eat_spaces(line);
+            line = eat_trailing_spaces(line);
+
+            Vector2 v = parse_vector2(line);
+
+            if (current_camera) {
+                assert(!current_entity);
+                current_camera->position = v;
+            } else if (current_entity) {
+                assert(!current_camera);
+                current_entity->position = v;
+            }
+        } else if (starts_with(line, "target")) {
+            line += string_length("target");
+            line = eat_spaces(line);
+            line = eat_trailing_spaces(line);
+
+            Vector2 v = parse_vector2(line);
+
+            if (!current_camera) {
+                report_error(&handler, "Field 'target' can only be set for Camera!");
+                return false;
+            }
+
+            assert(!current_entity);
+            current_camera->target = v;
+        } else if (starts_with(line, "size")) {
+            line += string_length("size");
+            line = eat_spaces(line);
+            line = eat_trailing_spaces(line);
+
+            Vector2 v = parse_vector2(line);
+
+            if (current_camera) {
+                report_error(&handler, "Field 'size' can't be set for Camera");
+                return false;
+            }
+            
+            assert(current_entity);
+            current_entity->size = v;
+        } else if (starts_with(line, "color")) {
+            line += string_length("color");
+            line = eat_spaces(line);
+            line = eat_trailing_spaces(line);
+
+            Vector4 v = parse_vector4(line);
+
+            if (current_camera) {
+                report_error(&handler, "Field 'color' can't be set for Camera!");
+                return false;
+            }
+
+            assert(current_entity);
+            current_entity->color = v;
+        } else if (starts_with(line, "radius")) {
+            line += string_length("radius");
+            line = eat_spaces(line);
+            line = eat_trailing_spaces(line);
+
+            float v = (float)atof(line);
+
+            if (current_camera) {
+                report_error(&handler, "Field 'radius' can't be set for Camera!");
+                return false;
+            }
+
+            assert(current_entity);
+
+            if (current_entity->type != ENTITY_TYPE_ENEMY && current_entity->type && ENTITY_TYPE_PROJECTILE && current_entity->type != ENTITY_TYPE_PICKUP) {
+                report_error(&handler, "Field 'radius' can be set only for entities of type Enemy, Projectile or Pickup!");
+                return false;
+            }
+
+            switch (current_entity->type) {
+                case ENTITY_TYPE_ENEMY: {
+                    Enemy *enemy = (Enemy *)current_entity;
+                    enemy->radius = v;
+                } break;
+
+                case ENTITY_TYPE_PROJECTILE: {
+                    Projectile *projectile = (Projectile *)current_entity;
+                    projectile->radius = v;
+                } break;
+
+                case ENTITY_TYPE_PICKUP: {
+                    Pickup *pickup = (Pickup *)current_entity;
+                    pickup->radius = v;
+                } break;
+            }
+        }
+    }
+
+    world->num_pickups_needed_to_unlock_door = world->by_type._Pickup.count;
+
+    if (world->by_type._Hero) {
+        world->camera->following_id = world->by_type._Hero->id;
+    }
+    
+    return true;
 }

@@ -39,6 +39,8 @@ void init_world(World *world, Vector2i size);
 void update_world(World *world, float dt);
 void draw_world(World *world);
 
+bool load_world_from_file(World *world, char *filepath);
+
 Vector2 world_space_to_screen_space(World *world, Vector2 v);
 Vector2 screen_space_to_world_space(World *world, Vector2 v);
 

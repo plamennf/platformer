@@ -47,7 +47,7 @@ struct Global_Variables {
     int render_height = 0;
     
     Time_Info time_info;
-    Program_Mode program_mode = PROGRAM_MODE_GAME;
+    Program_Mode program_mode = PROGRAM_MODE_MAIN_MENU;
     
     Shader *shader_color = NULL;
     Shader *shader_texture = NULL;
@@ -71,5 +71,11 @@ bool is_key_down(int key_code);
 bool is_key_pressed(int key_code);
 bool was_key_just_released(int key_code);
 
+double nanoseconds_to_seconds(u64 nanoseconds);
+u64 seconds_to_nanoseconds(double seconds);
+
 bool switch_to_world(char *world_name);
+void switch_to_first_world();
 void switch_to_next_world();
+
+void toggle_menu();

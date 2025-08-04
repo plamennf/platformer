@@ -6,6 +6,7 @@
 #include "tilemap.h"
 #include "camera.h"
 #include "font.h"
+#include "main_menu.h"
 
 #include <stdio.h>
 
@@ -33,12 +34,12 @@ bool was_key_just_released(int key_code) {
     return key_states[key_code].was_down && !key_states[key_code].is_down;
 }
 
-static double nanoseconds_to_seconds(u64 nanoseconds) {
+double nanoseconds_to_seconds(u64 nanoseconds) {
     double result = (double)nanoseconds / NS_PER_SECOND;
     return result;
 }
 
-static u64 seconds_to_nanoseconds(double seconds) {
+u64 seconds_to_nanoseconds(double seconds) {
     u64 result = (u64)(seconds * NS_PER_SECOND);
     return result;
 }
@@ -68,8 +69,14 @@ static void init_shaders() {
 
 static void init_framebuffer() {
     if (globals.window_width == 0 || globals.window_height == 0) return;
+
+    int vaw = VIEW_AREA_WIDTH, vah = VIEW_AREA_HEIGHT;
+    if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
+        vaw = 16;
+        vah = 9;
+    }
     
-    Rectangle2i render_area = aspect_ratio_fit(globals.window_width, globals.window_height, VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT);
+    Rectangle2i render_area = aspect_ratio_fit(globals.window_width, globals.window_height, vaw, vah);
 
     globals.render_width  = render_area.width;
     globals.render_height = render_area.height;
@@ -221,6 +228,14 @@ void switch_to_next_world() {
     globals.current_world_index = next_world_index;
 }
 
+void switch_to_first_world() {
+    if (!switch_to_world(globals.world_names[0])) {
+        exit(1);
+    }
+    
+    globals.current_world_index = 0;
+}
+
 static void draw_end_screen() {
     clear_framebuffer(0, 0, 0, 1);
     
@@ -287,13 +302,17 @@ int main(int argc, char *argv[]) {
 
         if (globals.program_mode == PROGRAM_MODE_GAME) {
             update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
+
+            if (is_key_pressed(KEY_ESCAPE)) toggle_menu();
         }
 
         if (globals.window_width > 0 && globals.window_height > 0) {
             set_framebuffer(globals.offscreen_buffer);
-
+            set_viewport(0, 0, globals.render_width, globals.render_height);
+            set_shader(NULL);
+            
             if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
-                globals.program_mode = PROGRAM_MODE_GAME;
+                draw_main_menu();
             } else if (globals.program_mode == PROGRAM_MODE_GAME) {
                 draw_world(globals.current_world);
                 draw_debug_hud();

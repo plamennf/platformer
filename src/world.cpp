@@ -94,9 +94,6 @@ void update_world(World *world, float dt) {
 }
 
 void draw_world(World *world) {
-    set_shader(NULL);
-    
-    set_viewport(0, 0, globals.render_width, globals.render_height);
     clear_framebuffer(0.2f, 0.5f, 0.8f, 1.0f);
 
     set_shader(globals.shader_color);

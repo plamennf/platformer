@@ -234,7 +234,7 @@ void update_single_enemy(Enemy *enemy, float dt) {
     
     if (!enemy->is_facing_right) {
         u8 tile1_id = get_tile_id_at(tilemap, v2(new_position.x, enemy->position.y));
-        u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x, enemy->position.y + enemy->size.y * 0.9f));
+        u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x, enemy->position.y + enemy->radius * 0.9f));
         if (is_tile_id_collidable(tilemap, tile1_id) || is_tile_id_collidable(tilemap, tile2_id)) {
             new_position.x = (int)new_position.x + 1.0f;
             enemy->is_facing_right = true;
@@ -245,8 +245,8 @@ void update_single_enemy(Enemy *enemy, float dt) {
             enemy->is_facing_right = true;
         }
     } else {
-        u8 tile1_id = get_tile_id_at(tilemap, v2(new_position.x + enemy->size.x, enemy->position.y));
-        u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x + enemy->size.x, enemy->position.y + enemy->size.y * 0.9f));
+        u8 tile1_id = get_tile_id_at(tilemap, v2(new_position.x + enemy->radius, enemy->position.y));
+        u8 tile2_id = get_tile_id_at(tilemap, v2(new_position.x + enemy->radius, enemy->position.y + enemy->radius * 0.9f));
         if (is_tile_id_collidable(tilemap, tile1_id) || is_tile_id_collidable(tilemap, tile2_id)) {
             new_position.x = static_cast <float>((int)new_position.x);
             enemy->is_facing_right = false;

@@ -11,6 +11,12 @@ struct Shader;
 struct Framebuffer;
 struct World;
 
+enum Program_Mode {
+    PROGRAM_MODE_MAIN_MENU,
+    PROGRAM_MODE_GAME,
+    PROGRAM_MODE_END,
+};
+
 struct Time_Info {
     u64 last_time = 0;
 
@@ -41,6 +47,7 @@ struct Global_Variables {
     int render_height = 0;
     
     Time_Info time_info;
+    Program_Mode program_mode = PROGRAM_MODE_GAME;
     
     Shader *shader_color = NULL;
     Shader *shader_texture = NULL;

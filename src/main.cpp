@@ -165,6 +165,12 @@ static void respond_to_input() {
                         os_window_toggle_fullscreen(globals.window);
                     }
                 }
+
+                if (globals.program_mode == PROGRAM_MODE_END) {
+                    if (event.key_pressed) {
+                        globals.should_quit_game = true;
+                    }
+                }
             } break;
         }
     }
@@ -203,7 +209,7 @@ bool switch_to_world(char *world_name) {
 void switch_to_next_world() {
     int next_world_index = globals.current_world_index + 1;
     if (next_world_index >= globals.world_names.count) {
-        // TODO: Show end of game screen.
+        globals.program_mode = PROGRAM_MODE_END;
         return;
     }
 
@@ -213,6 +219,29 @@ void switch_to_next_world() {
     }
 
     globals.current_world_index = next_world_index;
+}
+
+static void draw_end_screen() {
+    clear_framebuffer(0, 0, 0, 1);
+    
+    set_shader(globals.shader_text);
+    rendering_2d(globals.render_width, globals.render_height);
+
+    set_blend_mode(BLEND_MODE_ALPHA);
+    set_cull_mode(CULL_MODE_OFF);
+    set_depth_test_mode(DEPTH_TEST_OFF);
+    
+    int font_size = (int)(0.1f * globals.render_height);
+    Dynamic_Font *font = get_font_at_size("KarminaBoldItalic", font_size);
+    char *text = "Congratulations!";
+    int x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
+    int y = globals.render_height / 2;
+    draw_text(font, text, x, y, v4(1, 1, 1, 1));
+
+    text = "You've completed the game!";
+    x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
+    y -= font->character_height;
+    draw_text(font, text, x, y, v4(1, 1, 1, 1));
 }
 
 int main(int argc, char *argv[]) {
@@ -242,6 +271,7 @@ int main(int argc, char *argv[]) {
     while (!globals.should_quit_game) {
         if (globals.should_switch_worlds) {
             switch_to_next_world();
+            globals.should_switch_worlds = false;
         }
         
         update_time();
@@ -254,13 +284,23 @@ int main(int argc, char *argv[]) {
 
         os_update_window_events();
         respond_to_input();
-        
-        update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
+
+        if (globals.program_mode == PROGRAM_MODE_GAME) {
+            update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
+        }
 
         if (globals.window_width > 0 && globals.window_height > 0) {
             set_framebuffer(globals.offscreen_buffer);
-            draw_world(globals.current_world);
-            draw_debug_hud();
+
+            if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
+                globals.program_mode = PROGRAM_MODE_GAME;
+            } else if (globals.program_mode == PROGRAM_MODE_GAME) {
+                draw_world(globals.current_world);
+                draw_debug_hud();
+            } else if (globals.program_mode == PROGRAM_MODE_END) {
+                draw_end_screen();
+            }
+
             blit_framebuffer_to_back_buffer_with_letter_boxing(globals.offscreen_buffer);
         }
         

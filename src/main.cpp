@@ -7,6 +7,7 @@
 #include "camera.h"
 #include "font.h"
 #include "main_menu.h"
+#include "audio.h"
 
 #include <stdio.h>
 
@@ -271,7 +272,9 @@ int main(int argc, char *argv[]) {
     init_resource_manager(); // !!! Need to init resource manager before shaders and textures !!!
     init_shaders();
     init_framebuffer();
-
+    init_audio();
+    defer { destroy_audio(); };
+    
     //init_test_world();
     //globals.current_world = new World();
     //if (!load_world_from_file(globals.current_world, "data/worlds/test.wrld")) {
@@ -281,6 +284,8 @@ int main(int argc, char *argv[]) {
     globals.world_names.add("test");
     globals.world_names.add("test1");
     switch_to_next_world();
+
+    //Audio_Handle handle = play_wav("data/sounds/button1.wav");
     
     globals.time_info.last_time = os_get_time_nanoseconds();
     u64 last_time = os_get_time_nanoseconds();

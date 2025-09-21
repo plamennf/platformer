@@ -4,4 +4,5 @@ Ideas for enemies:
 TODO:
 - Add audio.
 - Add game icon.
+- Add health and coin icons.
 - Add more content.

@@ -7,6 +7,7 @@ const float MOVE_SPEED = 5.0f;
 const float JUMP_FORCE = 15.0f;
 const float MAX_FALL_SPEED = -25.0f;
 const float FAST_FALL_MULTIPLIER = 1.5f;
+const float COIN_FLASH_TIME = 0.3f;
 
 const double PROJECTILE_DAMAGE = 1.0;
 const double ENEMY_DAMAGE = 0.5;
@@ -45,6 +46,7 @@ struct Hero : public Entity {
     bool is_on_ground = true;
     double health = 3.0;
     int num_pickups = 0;
+    float coin_flash_timer = 0.0f;
 };
 
 void update_single_hero(Hero *hero, float dt);

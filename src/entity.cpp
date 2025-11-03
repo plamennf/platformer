@@ -128,9 +128,14 @@ void update_single_hero(Hero *hero, float dt) {
         if (are_rect_and_circle_colliding(hero_rect, pickup->position, pickup->radius)) {
             hero->num_pickups++;
             schedule_for_destruction(pickup);
+            hero->coin_flash_timer = COIN_FLASH_TIME;
         }
     }
 
+    if (hero->coin_flash_timer > 0.0f) {
+        hero->coin_flash_timer -= dt;
+    }
+    
     if (world->by_type._Door && !world->by_type._Door->scheduled_for_destruction) {
         Door *door = world->by_type._Door;
         
@@ -193,8 +198,13 @@ void draw_single_hero(Hero *hero) {
     Vector2 right_eye_screen_space_position = world_space_to_screen_space(world, right_eye_position);
 
     Vector2 screen_space_eye_size           = world_space_to_screen_space(world, eye_size);
+
+    Vector4 body_color = v4(0, 0, 0, 1);
+    if (hero->coin_flash_timer > 0.0f) {
+        body_color = v4(1, 1, 0, 1);
+    }
     
-    immediate_quad(body_screen_space_position, body_screen_space_size, v4(0, 0, 0, 1));
+    immediate_quad(body_screen_space_position, body_screen_space_size, body_color);
 
     immediate_quad(left_eye_screen_space_position,  screen_space_eye_size, v4(1, 1, 1, 1));
     immediate_quad(right_eye_screen_space_position, screen_space_eye_size, v4(1, 1, 1, 1));

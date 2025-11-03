@@ -20,6 +20,13 @@ struct Entities_By_Type {
     Array <Pickup *> _Pickup;
 };
 
+struct Level_Fade {
+    bool active = false;
+    float timer = 0.0f;
+    float duration = 1.5f;
+    int level_number = 0;
+};
+
 struct World {
     Entities_By_Type by_type;
     Hash_Table <u64, Entity *> entity_lookup;
@@ -28,6 +35,8 @@ struct World {
     Array <Entity *> entities_to_be_destroyed;
 
     int num_pickups_needed_to_unlock_door = 0;
+    Level_Fade level_fade;
+    bool level_intro = true;
     
     Tilemap *tilemap;
     Camera *camera;

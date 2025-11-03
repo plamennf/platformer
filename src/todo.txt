@@ -1,5 +1,16 @@
-Ideas for enemies:
-- One-eyed circles that periodically shoot lasers from their eyes.
+- Add particles for:
+  - jumping
+  - stomping on an enemy
+  - blood coming out when player is hit
+- Add yellow outline/tint to the player when he collects a coin
+- Complete the game after completing a certain number of levels.
+- Animate enemy dying
+- Present health and number of pickups in a better way
+- Add more colors to the game(tiles and enemies)
+- Add fader which shows the level number when starting a level
+- Block everything except camera updates until the camera pans to the player, when loading a level or remove camera panning to the player at the start.
+- Add ability to reset level if you get locked out.
+- Add audio
 
 TODO:
 - Add audio.

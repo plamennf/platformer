@@ -332,6 +332,15 @@ bool switch_to_random_world(int total_width) {
     globals.current_world->camera->dead_zone_size = v2(VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT) * 0.1f;
     globals.current_world->camera->smooth_factor  = 0.95f;
 
+    globals.current_world_index++;
+    
+    Level_Fade level_fade   = {};
+    level_fade.active       = true;
+    level_fade.timer        = 0.0f;
+    level_fade.duration     = 1.5f;
+    level_fade.level_number = globals.current_world_index;
+    globals.current_world->level_fade = level_fade;
+    
     return true;
 }
 

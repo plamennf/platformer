@@ -60,6 +60,7 @@ struct Global_Variables {
     
     World *current_world = NULL;
 
+    int current_world_index = 0;
     bool should_switch_worlds = false;
     int num_worlds_completed = 0;
     int num_worlds_needed_to_complete_the_game = 10;

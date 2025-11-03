@@ -22,75 +22,92 @@ void init_world(World *world, Vector2i size) {
 }
 
 void update_world(World *world, float dt) {
-    for (Enemy *enemy : world->by_type._Enemy) {
-        if (enemy->scheduled_for_destruction) continue;
+    if (!world->level_intro) {
+        for (Enemy *enemy : world->by_type._Enemy) {
+            if (enemy->scheduled_for_destruction) continue;
 
-        update_single_enemy(enemy, dt);
-    }
+            update_single_enemy(enemy, dt);
+        }
 
-    for (Projectile *projectile : world->by_type._Projectile) {
-        if (projectile->scheduled_for_destruction) continue;
+        for (Projectile *projectile : world->by_type._Projectile) {
+            if (projectile->scheduled_for_destruction) continue;
 
-        update_single_projectile(projectile, dt);
-    }
+            update_single_projectile(projectile, dt);
+        }
     
-    if (world->by_type._Hero) {
-        if (!world->by_type._Hero->scheduled_for_destruction) {
-            update_single_hero(world->by_type._Hero, dt);
+        if (world->by_type._Hero) {
+            if (!world->by_type._Hero->scheduled_for_destruction) {
+                update_single_hero(world->by_type._Hero, dt);
 
-            if (world->by_type._Door) {
-                if (!world->by_type._Door->scheduled_for_destruction) {
-                    if (world->by_type._Hero->num_pickups >= world->num_pickups_needed_to_unlock_door) {
-                        world->by_type._Door->locked = false;
+                if (world->by_type._Door) {
+                    if (!world->by_type._Door->scheduled_for_destruction) {
+                        if (world->by_type._Hero->num_pickups >= world->num_pickups_needed_to_unlock_door) {
+                            world->by_type._Door->locked = false;
+                        }
                     }
                 }
             }
         }
     }
+        
+    if (world->level_fade.active) {
+        world->level_fade.timer += dt;
+        if (world->level_fade.timer > world->level_fade.duration) {
+            world->level_fade.active = false;
+        }
+    }
 
     update_camera(world->camera, world, dt);
-
-    // Is it safe to do this here???
-    for (Entity *e : world->entities_to_be_destroyed) {
-        int index = world->all_entities.find(e);
-        if (index != -1) {
-            world->all_entities.ordered_remove_by_index(index);
+    if (world->level_intro) {
+        Vector2 delta = world->camera->target - world->camera->position;
+        if (length(delta) < 0.1f) {
+            world->level_intro = false;
         }
-
-        for (int i = 0; i < world->entity_lookup.allocated; i++) {
-            auto bucket = &world->entity_lookup.buckets[i];
-            if (bucket->key == e->id && bucket->value == e) {
-                world->entity_lookup.occupancy_mask[i] = false;
-                break;
-            }
-        }
-        world->entity_lookup.count--;
-
-        switch (e->type) {
-            case ENTITY_TYPE_HERO: {
-                world->by_type._Hero = NULL;
-            } break;
-
-            case ENTITY_TYPE_ENEMY: {
-                world->by_type._Enemy.ordered_remove_by_value((Enemy *)e);
-            } break;
-
-            case ENTITY_TYPE_PROJECTILE: {
-                world->by_type._Projectile.ordered_remove_by_value((Projectile *)e);
-            } break;
-
-            case ENTITY_TYPE_PICKUP: {
-                world->by_type._Pickup.ordered_remove_by_value((Pickup *)e);
-            } break;
-
-            case ENTITY_TYPE_DOOR: {
-                world->by_type._Door = NULL;
-            } break;
-        }
-
-        delete e;
     }
-    world->entities_to_be_destroyed.count = 0;
+
+    if (!world->level_intro) {
+        // Is it safe to do this here???
+        for (Entity *e : world->entities_to_be_destroyed) {
+            int index = world->all_entities.find(e);
+            if (index != -1) {
+                world->all_entities.ordered_remove_by_index(index);
+            }
+
+            for (int i = 0; i < world->entity_lookup.allocated; i++) {
+                auto bucket = &world->entity_lookup.buckets[i];
+                if (bucket->key == e->id && bucket->value == e) {
+                    world->entity_lookup.occupancy_mask[i] = false;
+                    break;
+                }
+            }
+            world->entity_lookup.count--;
+
+            switch (e->type) {
+                case ENTITY_TYPE_HERO: {
+                    world->by_type._Hero = NULL;
+                } break;
+
+                case ENTITY_TYPE_ENEMY: {
+                    world->by_type._Enemy.ordered_remove_by_value((Enemy *)e);
+                } break;
+
+                case ENTITY_TYPE_PROJECTILE: {
+                    world->by_type._Projectile.ordered_remove_by_value((Projectile *)e);
+                } break;
+
+                case ENTITY_TYPE_PICKUP: {
+                    world->by_type._Pickup.ordered_remove_by_value((Pickup *)e);
+                } break;
+
+                case ENTITY_TYPE_DOOR: {
+                    world->by_type._Door = NULL;
+                } break;
+            }
+
+            delete e;
+        }
+        world->entities_to_be_destroyed.count = 0;
+    }
 }
 
 void draw_world(World *world) {
@@ -160,9 +177,23 @@ void draw_world(World *world) {
     draw_text(font, text, x, y, color);
 
     y -= font->character_height;
-    snprintf(text, sizeof(text), "Pickups: %d", world->by_type._Hero ? world->by_type._Hero->num_pickups : 0);
+    snprintf(text, sizeof(text), "Pickups: %d/%d", world->by_type._Hero ? world->by_type._Hero->num_pickups : 0, world->num_pickups_needed_to_unlock_door);
     color = v4(1, 1, 0, 1);
     draw_text(font, text, x, y, color);
+
+    if (world->level_fade.active) {
+        font_size = (int)(0.15f * globals.render_height);
+        font = get_font_at_size("Inconsolata-Regular", font_size);
+        float alpha = 1.0f;
+        if (world->level_fade.timer > 1.0f) {
+            alpha = 1.0f - (world->level_fade.timer / (world->level_fade.duration + 0.0f));
+        }
+        snprintf(text, sizeof(text), "Level %d", world->level_fade.level_number);
+        x = (globals.render_width - font->get_string_width_in_pixels(text)) / 2;
+        y = globals.render_height - font->character_height;
+        color = v4(1, 1, 1, alpha);
+        draw_text(font, text, x, y, color);
+    }
 }
 
 void destroy_world(World *world) {

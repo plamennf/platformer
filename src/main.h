@@ -11,6 +11,8 @@ struct Shader;
 struct Framebuffer;
 struct World;
 
+const int MAX_RESTARTS = 3;
+
 enum Program_Mode {
     PROGRAM_MODE_MAIN_MENU,
     PROGRAM_MODE_GAME,
@@ -57,14 +59,20 @@ struct Global_Variables {
     Matrix4 view_to_proj_matrix;
     Matrix4 world_to_view_matrix;
     Matrix4 object_to_world_matrix;
-    
-    World *current_world = NULL;
 
+    World *menu_world = NULL;    
+    World *current_world = NULL;
+    World *copy_of_current_world = NULL;
+    //bool is_in_pause_menu = false;
+    int num_restarts_for_current_world = 0;
+    int current_fail_msg_index = -1;
+    
     int current_world_index = 0;
     bool should_switch_worlds = false;
     int num_worlds_completed = 0;
-    int num_worlds_needed_to_complete_the_game = 10;
     int start_level_width = 30;
+
+    int num_frames_since_startup = 0;
 };
 
 extern Global_Variables globals;
@@ -82,3 +90,4 @@ void switch_to_next_world();
 
 void toggle_menu();
 bool switch_to_random_world(int total_width);
+bool restart_current_world();

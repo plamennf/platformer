@@ -14,6 +14,8 @@
 
 #define WORLD_FILE_VERSION 1
 
+static void register_entity(World *world, Entity *e, Entity_Type type);
+
 void init_world(World *world, Vector2i size) {
     unsigned long long init[] = {(u64)size.x, (u64)size.y};
     init_by_array64(init, ArrayCount(init));
@@ -116,7 +118,7 @@ void update_world(World *world, float dt) {
     }
 }
 
-void draw_world(World *world) {
+void draw_world(World *world, bool skip_hud) {
     clear_framebuffer(0.2f, 0.5f, 0.8f, 1.0f);
 
     set_shader(globals.shader_color);
@@ -131,27 +133,29 @@ void draw_world(World *world) {
     assert(world->tilemap);
     draw_tilemap(world->tilemap, world);
 
-    for (Enemy *enemy : world->by_type._Enemy) {
-        if (enemy->scheduled_for_destruction) continue;
+    if (!skip_hud) {
+        for (Enemy *enemy : world->by_type._Enemy) {
+            if (enemy->scheduled_for_destruction) continue;
         
-        draw_single_enemy(enemy);
-    }
+            draw_single_enemy(enemy);
+        }
 
-    for (Projectile *projectile : world->by_type._Projectile) {
-        if (projectile->scheduled_for_destruction) continue;
+        for (Projectile *projectile : world->by_type._Projectile) {
+            if (projectile->scheduled_for_destruction) continue;
 
-        draw_single_projectile(projectile);
-    }
+            draw_single_projectile(projectile);
+        }
 
-    for (Pickup *pickup : world->by_type._Pickup) {
-        if (pickup->scheduled_for_destruction) continue;
+        for (Pickup *pickup : world->by_type._Pickup) {
+            if (pickup->scheduled_for_destruction) continue;
 
-        draw_single_pickup(pickup);
-    }
+            draw_single_pickup(pickup);
+        }
 
-    Door *door = world->by_type._Door;
-    if (door && !door->scheduled_for_destruction) {
-        draw_single_door(door);
+        Door *door = world->by_type._Door;
+        if (door && !door->scheduled_for_destruction) {
+            draw_single_door(door);
+        }
     }
     
     Hero *hero = world->by_type._Hero;
@@ -169,38 +173,45 @@ void draw_world(World *world) {
     set_blend_mode(BLEND_MODE_ALPHA);
     set_cull_mode(CULL_MODE_OFF);
     set_depth_test_mode(DEPTH_TEST_OFF);
-    
-    int font_size = (int)(0.03f * globals.render_height);
-    Dynamic_Font *font = get_font_at_size("Inconsolata-Regular", font_size);
-    char text[256];
-    snprintf(text, sizeof(text), "Health: %.1lf", world->by_type._Hero ? world->by_type._Hero->health : 0.0);
-    int x = 0;
-    int y = globals.render_height - font->character_height;
 
-    Vector4 color = v4(0, 1, 0, 1);
-    if ((world->by_type._Hero && world->by_type._Hero->health <= 0.0) ||
-        !world->by_type._Hero) {
-        color = v4(1, 0, 0, 1);
-    }
-    draw_text(font, text, x, y, color);
+    if (!skip_hud) {
+        int font_size = (int)(0.03f * globals.render_height);
+        Dynamic_Font *font = get_font_at_size("Inconsolata-Regular", font_size);
+        char text[256];
+        snprintf(text, sizeof(text), "Health: %.1lf", world->by_type._Hero ? world->by_type._Hero->health : 0.0);
+        int x = 0;
+        int y = globals.render_height - font->character_height;
 
-    y -= font->character_height;
-    snprintf(text, sizeof(text), "Pickups: %d/%d", world->by_type._Hero ? world->by_type._Hero->num_pickups : 0, world->num_pickups_needed_to_unlock_door);
-    color = v4(1, 1, 0, 1);
-    draw_text(font, text, x, y, color);
-
-    if (world->level_fade.active) {
-        font_size = (int)(0.15f * globals.render_height);
-        font = get_font_at_size("Inconsolata-Regular", font_size);
-        float alpha = 1.0f;
-        if (world->level_fade.timer > 1.0f) {
-            alpha = 1.0f - (world->level_fade.timer / (world->level_fade.duration + 0.0f));
+        Vector4 color = v4(0, 1, 0, 1);
+        if ((world->by_type._Hero && world->by_type._Hero->health <= 0.0) ||
+            !world->by_type._Hero) {
+            color = v4(1, 0, 0, 1);
         }
-        snprintf(text, sizeof(text), "Level %d", world->level_fade.level_number);
-        x = (globals.render_width - font->get_string_width_in_pixels(text)) / 2;
-        y = globals.render_height - font->character_height;
-        color = v4(1, 1, 1, alpha);
         draw_text(font, text, x, y, color);
+
+        y -= font->character_height;
+        snprintf(text, sizeof(text), "Pickups: %d/%d", world->by_type._Hero ? world->by_type._Hero->num_pickups : 0, world->num_pickups_needed_to_unlock_door);
+        color = v4(1, 1, 0, 1);
+        draw_text(font, text, x, y, color);
+
+        y -= font->character_height;
+        snprintf(text, sizeof(text), "Restarts: %d/%d", globals.num_restarts_for_current_world, MAX_RESTARTS);
+        color = v4(1, 0, 0, 1);
+        draw_text(font, text, x, y, color);
+        
+        if (world->level_fade.active) {
+            font_size = (int)(0.15f * globals.render_height);
+            font = get_font_at_size("Inconsolata-Regular", font_size);
+            float alpha = 1.0f;
+            if (world->level_fade.timer > 1.0f) {
+                alpha = 1.0f - (world->level_fade.timer / (world->level_fade.duration + 0.0f));
+            }
+            snprintf(text, sizeof(text), "Level %d", world->level_fade.level_number);
+            x = (globals.render_width - font->get_string_width_in_pixels(text)) / 2;
+            y = globals.render_height - font->character_height;
+            color = v4(1, 1, 1, alpha);
+            draw_text(font, text, x, y, color);
+        }
     }
 }
 
@@ -232,6 +243,120 @@ void destroy_world(World *world) {
     world->by_type._Enemy.deallocate();
     world->by_type._Projectile.deallocate();
     world->by_type._Pickup.deallocate();
+}
+
+static Tilemap *copy_tilemap(Tilemap *tilemap) {
+    if (!tilemap) return nullptr;
+
+    Tilemap *result = new Tilemap();
+    result->width  = tilemap->width;
+    result->height = tilemap->height;
+    result->num_colors = tilemap->num_colors;
+    result->num_collidable_ids = tilemap->num_collidable_ids;
+
+    // Copy tile data
+    int total_tiles = tilemap->width * tilemap->height;
+    if (tilemap->tiles && total_tiles > 0) {
+        result->tiles = (u8 *)malloc(total_tiles * sizeof(u8));
+        memcpy(result->tiles, tilemap->tiles, total_tiles * sizeof(u8));
+    }
+
+    // Copy color palette
+    if (tilemap->colors && tilemap->num_colors > 0) {
+        result->colors = (Vector4 *)malloc(tilemap->num_colors * sizeof(Vector4));
+        memcpy(result->colors, tilemap->colors, tilemap->num_colors * sizeof(Vector4));
+    }
+
+    // Copy collidable tile IDs
+    if (tilemap->collidable_ids && tilemap->num_collidable_ids > 0) {
+        result->collidable_ids = (u8 *)malloc(tilemap->num_collidable_ids * sizeof(u8));
+        memcpy(result->collidable_ids, tilemap->collidable_ids, tilemap->num_collidable_ids * sizeof(u8));
+    }
+
+    return result;
+}
+
+World *copy_world(World *world) {
+    if (!world) return NULL;
+    
+    World *result = new World();
+    
+    result->size = world->size;
+    result->num_pickups_needed_to_unlock_door = world->num_pickups_needed_to_unlock_door;
+    result->level_fade = world->level_fade;
+    result->level_intro = world->level_intro;
+
+    if (world->tilemap) {
+        result->tilemap = copy_tilemap(world->tilemap);
+    }
+
+    if (world->camera) {
+        result->camera = new Camera();
+        *result->camera = *world->camera;
+    }
+
+    result->particle_system = new Particle_System();
+    result->particle_system->particles.reserve(128);
+
+    result->all_entities.reserve(world->all_entities.count);
+
+    auto clone_entity = [&](Entity *e) -> Entity * {
+        if (!e) return nullptr;
+
+        Entity *copy = nullptr;
+        switch (e->type) {
+            case ENTITY_TYPE_HERO: {
+                Hero *h = new Hero(*((Hero *)e));
+                copy = h;
+                result->by_type._Hero = h;
+                register_entity(result, h, ENTITY_TYPE_HERO);
+            } break;
+                
+            case ENTITY_TYPE_DOOR: {
+                Door *d = new Door(*((Door *)e));
+                copy = d;
+                result->by_type._Door = d;
+                register_entity(result, d, ENTITY_TYPE_DOOR);
+            } break;
+                
+            case ENTITY_TYPE_ENEMY: {
+                Enemy *en = new Enemy(*((Enemy *)e));
+                copy = en;
+                result->by_type._Enemy.add(en);
+                register_entity(result, en, ENTITY_TYPE_ENEMY);
+            } break;
+                
+            case ENTITY_TYPE_PROJECTILE: {
+                Projectile *p = new Projectile(*((Projectile *)e));
+                copy = p;
+                result->by_type._Projectile.add(p);
+                register_entity(result, p, ENTITY_TYPE_PROJECTILE);
+            } break;
+                
+            case ENTITY_TYPE_PICKUP: {
+                Pickup *p = new Pickup(*((Pickup *)e));
+                copy = p;
+                result->by_type._Pickup.add(p);
+                register_entity(result, p, ENTITY_TYPE_PICKUP);
+            } break;
+                
+            default: {
+                copy = new Entity(*e);
+            } break;
+        }
+
+        return copy;
+    };
+
+    for (Entity *e : world->all_entities) {
+        clone_entity(e);
+    }
+
+    if (result->camera && result->by_type._Hero) {
+        result->camera->following_id = result->by_type._Hero->id;
+    }
+
+    return result;
 }
 
 Vector2 world_space_to_screen_space(World *world, Vector2 v) {

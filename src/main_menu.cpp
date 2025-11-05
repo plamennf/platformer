@@ -2,6 +2,11 @@
 #include "rendering.h"
 #include "resource_manager.h"
 #include "font.h"
+#include "world.h"
+
+static const Vector4 MENU_COLOR_TEXT      = v4(0.95f, 0.92f, 0.88f, 1); // warm white
+static const Vector4 MENU_COLOR_HIGHLIGHT = v4(1.0f, 0.8f, 0.3f, 1);   // golden
+static const Vector4 MENU_COLOR_SUBTEXT   = v4(0.6f, 0.65f, 0.7f, 1);
 
 enum Menu_Page {
     MENU_PAGE_MAIN,
@@ -25,6 +30,11 @@ static int index_quit     = -1;
 
 static int menu_items_total = 4; // Will get reset after first draw phase.
 static int num_menu_items_drawn = 0;
+
+static int get_x_pad() {
+    int x_pad = (int)(globals.render_width * 0.08f);
+    return x_pad;
+}
 
 void toggle_menu() {
     if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
@@ -53,16 +63,21 @@ static void handle_enter() {
     int choice = current_menu_choice;
     
     if (choice == index_resume) {
+        if (globals.current_world == globals.menu_world) {
+            switch_to_random_world(globals.start_level_width);
+        }
         toggle_menu();
     } else if (choice == index_controls) {
         current_menu_page = MENU_PAGE_CONTROLS;
     } else if (choice == index_restart) {
         if (asking_for_restart_confirmation) {
-            //switch_to_first_world();
-            switch_to_random_world(globals.start_level_width);
+            restart_current_world();
             toggle_menu();
+        } else {
+            if (globals.current_world != globals.menu_world) {
+                asking_for_restart_confirmation = true;
+            }
         }
-        else asking_for_restart_confirmation = true;
     } else if (choice == index_quit) {
         if (asking_for_quit_confirmation) globals.should_quit_game = true;
         else asking_for_quit_confirmation = true;
@@ -71,14 +86,15 @@ static void handle_enter() {
 
 static int draw_item(char *text, Dynamic_Font *font, int center_x, int y, Vector4 color) {
     int width = font->get_string_width_in_pixels(text);
-
+    int x_pad = get_x_pad();
+    
     int index = num_menu_items_drawn;
     
-    Vector4 item_color = color;
+    Vector4 item_color = MENU_COLOR_TEXT;
     if (index == current_menu_choice) {
-        item_color = v4(1, 173/255.0f, 0, 1);
+        item_color = MENU_COLOR_HIGHLIGHT;//v4(1, 173/255.0f, 0, 1);
 
-        Vector4 non_white = v4(1, 222/255.0f, 0, 1);
+        Vector4 non_white = MENU_COLOR_HIGHLIGHT;//v4(1, 222/255.0f, 0, 1);
         Vector4 white = v4(1, 1, 1, 1);
 
         double now = nanoseconds_to_seconds(globals.time_info.real_world_time);
@@ -89,10 +105,16 @@ static int draw_item(char *text, Dynamic_Font *font, int center_x, int y, Vector
         Vector4 backing_color = lerp(non_white, white, (float)t);
 
         int offset = font->character_height / 40;
+#if 0
         draw_text(font, text, center_x - width / 2 + offset, y - offset, item_color);
         draw_text(font, text, center_x - width / 2, y, backing_color);
+#else
+        draw_text(font, text, x_pad, y - offset, item_color);
+        draw_text(font, text, x_pad, y, backing_color);
+#endif
     } else {
-        draw_text(font, text, center_x - width / 2, y, item_color);
+        //draw_text(font, text, center_x - width / 2, y, item_color);
+        draw_text(font, text, x_pad, y, item_color);
     }
 
     num_menu_items_drawn++;
@@ -123,7 +145,9 @@ static void draw_menu_choices() {
     // Menu item: Resume Game
     //
 
-    index_resume = draw_item("Resume", font, center_x, cursor_y, start_color);
+    char *text = "Resume";
+    if (globals.current_world == globals.menu_world) text = "Start";
+    index_resume = draw_item(text, font, center_x, cursor_y, start_color);
     cursor_y -= stride;
 
     //
@@ -137,7 +161,7 @@ static void draw_menu_choices() {
     // Menu item: Restart
     //
 
-    char *text = "Restart";
+    text = "Restart";
     if (asking_for_restart_confirmation) text = "Restart? Are you sure?";
     index_restart = draw_item(text, font, center_x, cursor_y, start_color);
     cursor_y -= stride;
@@ -166,8 +190,9 @@ static void draw_title() {
     auto title_font = get_font_at_size("KarminaBoldItalic", (int)(BIG_FONT_SIZE * 1.6f));
 
     Dynamic_Font *font = title_font;
-    char *text = "Platformer!";
-    int x = (globals.render_width - font->get_string_width_in_pixels(text)) / 2;
+    char *text = "Vertune";
+    //int x = (globals.render_width - font->get_string_width_in_pixels(text)) / 2;
+    int x = get_x_pad();
     int y = globals.render_height - (int)(font->character_height * 1.5f);
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
 }
@@ -224,8 +249,23 @@ static void draw_controls() {
 }
 
 void draw_main_menu() {
-    clear_framebuffer(0, 0.3f, 0.4f, 1);
-
+/*
+    if (globals.is_in_pause_menu) {
+        draw_world(globals.current_world, true);
+    } else {
+        draw_world(globals.menu_world, true);
+    }
+*/
+    
+    draw_world(globals.current_world, true);
+    
+    set_shader(globals.shader_color);
+    rendering_2d(globals.render_width, globals.render_height, matrix4_identity());
+    
+    immediate_begin();
+    immediate_quad(v2(0, 0), v2((float)globals.render_width, (float)globals.render_height), v4(0, 0, 0, 0.1f));
+    immediate_flush();
+    
     switch (current_menu_page) {
         case MENU_PAGE_MAIN: {
             draw_title();

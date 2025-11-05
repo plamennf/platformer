@@ -15,6 +15,13 @@
 
 Global_Variables globals;
 
+char *fail_msgs[] = {
+    "You fell short... Try again!",
+    "Not quite there - give it another go!",
+    "The world fades... but you can rise again."
+    "One misstep. But you're getting closer."
+};
+
 struct Key_State {
     bool is_down;
     bool was_down;
@@ -175,9 +182,15 @@ static void respond_to_input() {
                 }
 
                 if (globals.program_mode == PROGRAM_MODE_END) {
-                    if (event.key_pressed) {
+                    if (event.key_pressed && !event.is_key_repeat) {
                         globals.program_mode = PROGRAM_MODE_MAIN_MENU;
-                        switch_to_random_world(globals.start_level_width);
+                        //switch_to_random_world(globals.start_level_width);
+                        destroy_world(globals.current_world);
+                        destroy_world(globals.copy_of_current_world);
+                        globals.copy_of_current_world = NULL;
+                        globals.current_world = globals.menu_world;
+                        globals.num_restarts_for_current_world = 0;
+                        // TODO: Save the high scores to a file.
                     }
                 }
             } break;
@@ -222,7 +235,7 @@ static void generate_random_level(World *world, int level_width, int level_heigh
         tilemap->tiles[ground_y * level_width + x] = 1;
     }
 
-    float max_jump_height = (JUMP_FORCE * JUMP_FORCE / (-2.0f * GRAVITY));
+    float max_jump_height = (JUMP_FORCE * JUMP_FORCE / (-2.0f * GRAVITY)) - 1.0f;
     
     struct Platform {
         int x_start;
@@ -289,7 +302,7 @@ static void generate_random_level(World *world, int level_width, int level_heigh
 
         for (int i = 0; i < num_coins; i++) {
             float coin_x = plat.x_start + 0.5f + rand() % (plat.x_end - plat.x_start + 1);
-            float coin_y = plat.y + 3.5f;
+            float coin_y = plat.y + 2.5f;
 
             bool boost_coin = (rand() % 3 == 0);
             if (boost_coin) {
@@ -316,8 +329,20 @@ static void generate_random_level(World *world, int level_width, int level_heigh
     world->num_pickups_needed_to_unlock_door = (int)world->by_type._Pickup.count;
 }
 
+bool create_menu_world() {
+    globals.menu_world = new World();
+    init_world(globals.menu_world, v2i(20, 18));
+
+    generate_random_level(globals.menu_world, 20, 18);
+
+    globals.menu_world->camera           = new Camera();
+    globals.menu_world->camera->position = globals.menu_world->by_type._Hero->position + v2(VIEW_AREA_WIDTH * 0.5f, VIEW_AREA_HEIGHT * 0.5f);
+
+    return true;
+}
+
 bool switch_to_random_world(int total_width) {
-    if (globals.current_world) {
+    if (globals.current_world && globals.current_world != globals.menu_world) {
         destroy_world(globals.current_world);
         delete globals.current_world;
         globals.current_world = NULL;
@@ -343,12 +368,62 @@ bool switch_to_random_world(int total_width) {
     level_fade.duration     = 1.5f;
     level_fade.level_number = globals.current_world_index;
     globals.current_world->level_fade = level_fade;
+
+    if (globals.copy_of_current_world) {
+        destroy_world(globals.copy_of_current_world);
+        globals.copy_of_current_world = NULL;
+    }
+    globals.copy_of_current_world = copy_world(globals.current_world);
+
+    globals.num_restarts_for_current_world = 0;
+    
+    return true;
+}
+
+bool restart_current_world() {
+    if (!globals.current_world) return false;
+    assert(globals.current_world);
+
+    globals.num_restarts_for_current_world++;
+    if (globals.num_restarts_for_current_world > MAX_RESTARTS) {
+        globals.program_mode = PROGRAM_MODE_END;
+        globals.current_fail_msg_index = rand() % ArrayCount(fail_msgs);
+        return true;
+    }
+
+    if (globals.copy_of_current_world) {
+        destroy_world(globals.current_world);
+    }
+    globals.current_world = copy_world(globals.copy_of_current_world);
     
     return true;
 }
 
 static void draw_end_screen() {
-    clear_framebuffer(0, 0, 0, 1);
+    //clear_framebuffer(0, 0, 0, 1);
+
+    set_shader(globals.shader_color);
+    rendering_2d(globals.render_width, globals.render_height, matrix4_identity());
+    
+    immediate_begin();
+    immediate_quad(v2(0, 0), v2((float)globals.render_width, (float)globals.render_height), v4(0, 0, 0, 0.5f));
+    immediate_flush();
+
+    immediate_begin();
+    int num_drops = 50;
+    for (int i = 0; i < num_drops; i++) {
+        float speed = 200.0f + (i * 10.0f);
+        float t = fmodf((globals.num_frames_since_startup * 0.016f * speed + i * 30.0f), globals.render_height + 20.0f); 
+        float x = fmodf(i * 37.0f + 50.0f, (float)globals.render_width);
+        float y = globals.render_height - t;
+    
+        float width = 2.0f;
+        float height = 10.0f + (i % 5);
+        Vector4 color = v4(0.8f, 0.9f, 1.0f, 0.2f + 0.1f * sinf(i + t));
+    
+        immediate_quad(v2(x, y), v2(width, height), color);
+    }
+    immediate_flush();
     
     set_shader(globals.shader_text);
     rendering_2d(globals.render_width, globals.render_height);
@@ -357,14 +432,15 @@ static void draw_end_screen() {
     set_cull_mode(CULL_MODE_OFF);
     set_depth_test_mode(DEPTH_TEST_OFF);
     
-    int font_size = (int)(0.1f * globals.render_height);
+    int font_size = (int)(0.05f * globals.render_height);
     Dynamic_Font *font = get_font_at_size("KarminaBoldItalic", font_size);
-    char *text = "Congratulations!";
+    char text[256];
+    snprintf(text, sizeof(text), "You managed to complete %d levels!", globals.num_worlds_completed);
     int x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
     int y = globals.render_height / 2;
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
-
-    text = "You've completed the game!";
+    
+    snprintf(text, sizeof(text), "%s", fail_msgs[globals.current_fail_msg_index]);
     x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
     y -= font->character_height;
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
@@ -385,12 +461,17 @@ int main(int argc, char *argv[]) {
     init_audio();
     defer { destroy_audio(); };
 
+    if (!create_menu_world()) return 1;
+    globals.current_world = globals.menu_world;
+    
     int current_level_width = globals.start_level_width;
-    switch_to_random_world(current_level_width);
+    //switch_to_random_world(current_level_width);
     
     globals.time_info.last_time = os_get_time_nanoseconds();
     u64 last_time = os_get_time_nanoseconds();
     while (!globals.should_quit_game) {
+        globals.num_frames_since_startup++;
+        
         if (globals.should_switch_worlds) {
             current_level_width += 30;
             switch_to_random_world(current_level_width);
@@ -411,7 +492,9 @@ int main(int argc, char *argv[]) {
         if (globals.program_mode == PROGRAM_MODE_GAME) {
             update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
 
-            if (is_key_pressed(KEY_ESCAPE)) toggle_menu();
+            if (is_key_pressed(KEY_ESCAPE)) {
+                toggle_menu();
+            }
         }
 
         if (globals.window_width > 0 && globals.window_height > 0) {
@@ -425,6 +508,9 @@ int main(int argc, char *argv[]) {
                 draw_world(globals.current_world);
                 draw_debug_hud();
             } else if (globals.program_mode == PROGRAM_MODE_END) {
+                if (globals.current_world) {
+                    draw_world(globals.current_world, true);
+                }
                 draw_end_screen();
             }
 

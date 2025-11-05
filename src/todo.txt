@@ -12,6 +12,8 @@
 - Package the assets into a single package file and load it at startup. The package shouldn't be big.
 - Change the backend to SDL3 on every system even windows.
 - Make a build.macos and run.macos file
+- Save the high scores to a file.
+- Add a fade out/fade in transition between the end of the game and the showing of the menu, so the player doesn't accidentally press a menu button without seeing it.
 
 TODO:
 - Add audio.

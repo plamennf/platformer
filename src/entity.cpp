@@ -3,6 +3,7 @@
 #include "world.h"
 #include "rendering.h"
 #include "tilemap.h"
+#include "particles.h"
 
 void update_single_hero(Hero *hero, float dt) {
     World *world = hero->world;
@@ -20,6 +21,7 @@ void update_single_hero(Hero *hero, float dt) {
     if (is_key_down('W') && hero->is_on_ground) {
         hero->velocity.y   = JUMP_FORCE;
         hero->is_on_ground = false;
+        emit_jump_particles(world->particle_system, hero->position);
     }
 
     hero->velocity.y += GRAVITY * dt;
@@ -74,6 +76,8 @@ void update_single_hero(Hero *hero, float dt) {
                 hero->is_on_ground = false;
 
                 has_jumped_on_enemy = true;
+
+                emit_stomp_particles(world->particle_system, enemy->position);
                 
                 break;
             }
@@ -216,6 +220,7 @@ void damage_hero(Hero *hero, double damage_amount) {
         hero->health = 0.0;
         schedule_for_destruction(hero);
     }
+    emit_blood_particles(hero->world->particle_system, hero->position);
 }
 
 void update_single_enemy(Enemy *enemy, float dt) {

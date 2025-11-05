@@ -325,3 +325,7 @@ float fract(float value) {
     float fractpart = value - intvalue;
     return fractpart;
 }
+
+float random_float() {
+    return (float)rand() / (float)RAND_MAX;
+}

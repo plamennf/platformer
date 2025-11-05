@@ -82,3 +82,4 @@ char *break_by_space(char *s);
 char *break_by_comma(char *s);
 
 float fract(float value);
+float random_float();

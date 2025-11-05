@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "font.h"
 #include "text_file_handler.h"
+#include "particles.h"
 
 #include "mt19937-64.h"
 
@@ -19,6 +20,9 @@ void init_world(World *world, Vector2i size) {
 
     world->tilemap = NULL;
     world->size    = size;
+
+    world->particle_system = new Particle_System();
+    world->particle_system->particles.reserve(1024);
 }
 
 void update_world(World *world, float dt) {
@@ -66,6 +70,8 @@ void update_world(World *world, float dt) {
     }
 
     if (!world->level_intro) {
+        update_particles(world->particle_system, dt);
+        
         // Is it safe to do this here???
         for (Entity *e : world->entities_to_be_destroyed) {
             int index = world->all_entities.find(e);
@@ -153,8 +159,10 @@ void draw_world(World *world) {
         draw_single_hero(hero);
     }
 
+    draw_particles(world->particle_system, world);
+    
     immediate_flush();
-
+    
     set_shader(globals.shader_text);
     rendering_2d(globals.render_width, globals.render_height);
 

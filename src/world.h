@@ -12,6 +12,8 @@ struct Projectile;
 struct Pickup;
 struct Door;
 
+struct Particle_System;
+
 struct Entities_By_Type {
     Hero *_Hero = NULL;
     Door *_Door = NULL;
@@ -40,6 +42,7 @@ struct World {
     
     Tilemap *tilemap;
     Camera *camera;
+    Particle_System *particle_system;
     
     Vector2i size;
 };

@@ -76,7 +76,8 @@ struct Array {
     T *add();
     int find(T const &item);
     void ordered_remove_by_index(int n);
-
+    void unordered_remove_by_index(int n);
+    
     inline void deallocate() {
         if (data) {
             free(data);
@@ -164,6 +165,12 @@ inline void Array <T>::ordered_remove_by_index(int n) {
     for (int i = n; i < count-1; i++) {
         data[i] = data[i+1];
     }
+    count--;
+}
+
+template <typename T>
+inline void Array <T>::unordered_remove_by_index(int n) {
+    data[n] = data[count - 1];
     count--;
 }
 

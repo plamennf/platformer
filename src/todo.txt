@@ -2,15 +2,16 @@
   - jumping
   - stomping on an enemy
   - blood coming out when player is hit
-- Add yellow outline/tint to the player when he collects a coin
-- Complete the game after completing a certain number of levels.
+- Make the game without end just keep going until you fail a level.
 - Animate enemy dying
 - Present health and number of pickups in a better way
 - Add more colors to the game(tiles and enemies)
-- Add fader which shows the level number when starting a level
-- Block everything except camera updates until the camera pans to the player, when loading a level or remove camera panning to the player at the start.
-- Add ability to reset level if you get locked out.
+- Add ability to reset level if you get locked out. Allow up to 3 level resets before failing the game
 - Add audio
+- Add death screen with a button to reset the level and one to quit the game
+- Package the assets into a single package file and load it at startup. The package shouldn't be big.
+- Change the backend to SDL3 on every system even windows.
+- Make a build.macos and run.macos file
 
 TODO:
 - Add audio.

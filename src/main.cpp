@@ -231,7 +231,7 @@ static void generate_random_level(World *world, int level_width, int level_heigh
     };
     Array <Platform> platforms;
 
-    int last_x = 0;
+    int last_x = 1;
     int last_y = 2;
     int min_platform_length = 3;
     int max_platform_length = 6;
@@ -254,7 +254,10 @@ static void generate_random_level(World *world, int level_width, int level_heigh
 
         int x_start = last_x + gap;
         int x_end = x_start + plat_length;
-        if (x_end >= level_width - 3) x_end = level_width - 4;
+        if (x_end >= level_width - 3) {
+            x_end = level_width - 4;
+            x_start = x_end - plat_length;
+        }
 
         for (int x = x_start; x<= x_end; x++) {
             tilemap->tiles[y * level_width + x] = 1;

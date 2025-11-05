@@ -295,7 +295,7 @@ static void generate_random_level(World *world, int level_width, int level_heigh
     int max_gap = 4;
     bool first_platform = true;
     
-    while (last_x < level_width - 6) {
+    while (last_x + min_gap + min_platform_length < level_width - 6) {
         int gap = min_gap + rand() % (max_gap - min_gap + 1);
         int plat_length = min_platform_length + rand() % (max_platform_length - min_platform_length + 1);
 
@@ -315,6 +315,9 @@ static void generate_random_level(World *world, int level_width, int level_heigh
             x_start = x_end - plat_length;
         }
 
+        x_start = Max(0, x_start);
+        x_end   = Min(level_width - 1, x_end);
+
         for (int x = x_start; x<= x_end; x++) {
             tilemap->tiles[y * level_width + x] = 1;
         }
@@ -326,8 +329,9 @@ static void generate_random_level(World *world, int level_width, int level_heigh
 
     int door_platform_length = 3;
     int door_y = platforms[platforms.count - 1].y + 2 + rand() % (int)max_jump_height;
-    int door_x_start = level_width - door_platform_length;
-    int door_x_end = level_width;
+    door_y = Min(level_height - 2, door_y);
+    int door_x_end = level_width - 1;
+    int door_x_start = Max(0, door_x_end - door_platform_length + 1);
 
     for (int x = door_x_start; x <= door_x_end; x++) {
         tilemap->tiles[door_y * level_width + x] = 1;
@@ -516,8 +520,21 @@ int main(int argc, char *argv[]) {
         globals.num_frames_since_startup++;
         
         if (globals.should_switch_worlds) {
-            current_level_width += 30;
-            switch_to_random_world(current_level_width);
+            bool should_restart_level = false;
+            if (globals.current_world) {
+                if (!globals.current_world->by_type._Hero ||
+                    globals.current_world->by_type._Hero->health <= 0.0) {
+                    should_restart_level = true;
+                }
+            }
+
+            if (should_restart_level) {
+                restart_current_world();
+            } else {
+                current_level_width += 30;
+                switch_to_random_world(current_level_width);
+            }
+
             globals.should_switch_worlds = false;
         }
         

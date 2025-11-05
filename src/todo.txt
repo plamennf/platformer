@@ -1,4 +1,4 @@
-- Animate enemy dying
+- Change the adjust_fps_cap_based_on_performance variables to be in globals not static.
 - Present health and number of pickups in a better way
 - Add more colors to the game(tiles and enemies)
 - Add audio

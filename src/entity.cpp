@@ -216,11 +216,12 @@ void draw_single_hero(Hero *hero) {
 
 void damage_hero(Hero *hero, double damage_amount) {
     hero->health -= damage_amount;
+    emit_blood_particles(hero->world->particle_system, hero->position);
     if (hero->health <= 0.0) {
         hero->health = 0.0;
         schedule_for_destruction(hero);
+        globals.should_switch_worlds = true;
     }
-    emit_blood_particles(hero->world->particle_system, hero->position);
 }
 
 void update_single_enemy(Enemy *enemy, float dt) {

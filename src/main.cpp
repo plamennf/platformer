@@ -69,6 +69,41 @@ static void update_time() {
     }
 }
 
+static void adjust_fps_cap_based_on_performance() {
+    static int slow_frame_count = 0;
+    static const int MAX_SLOW_FRAMES = 120; // e.g., wait ~2 seconds at 60 FPS
+    static int fast_frame_count = 0;
+    
+    int fps = 0;
+    if (globals.time_info.fps_dt > 0.0) {
+        fps = (int)(1.0 / globals.time_info.fps_dt);
+    } else {
+        return;
+    }
+    
+    if (fps < globals.time_info.fps_cap * 0.9f) { // Only count if significantly below target
+        slow_frame_count++;
+    } else {
+        slow_frame_count = 0; // reset if performance recovers
+    }
+
+    if (slow_frame_count > MAX_SLOW_FRAMES) {
+        globals.time_info.fps_cap = Max(30, globals.time_info.fps_cap / 2);
+        slow_frame_count = 0;
+    }
+
+    if (fps > globals.time_info.fps_cap * 1.1f) {
+        fast_frame_count++;
+        if (fast_frame_count > 300 && globals.time_info.fps_cap < 120) {
+            globals.time_info.fps_cap *= 2;
+            globals.time_info.fps_cap = Max(MAX_FPS_CAP, globals.time_info.fps_cap);
+            fast_frame_count = 0;
+        }
+    } else {
+        fast_frame_count = 0;
+    }
+}
+
 static void init_shaders() {
     globals.shader_color   = find_or_load_shader("color");
     globals.shader_texture = find_or_load_shader("texture");
@@ -110,11 +145,13 @@ static void draw_debug_hud() {
     if (globals.time_info.fps_dt > 0.0) {
         fps = (int)(1.0 / globals.time_info.fps_dt);
 
+#if 0
         // Lower the fps limit if the user's machine can't hit the required fps.
         // @TODO: Put this somewhere better not fucking draw_debug_hud ffs.
         if (fps < globals.time_info.fps_cap) {
             globals.time_info.fps_cap /= 2;
         }
+#endif
     }
     
     int font_size = (int)(0.03f * globals.render_height);
@@ -183,6 +220,11 @@ static void respond_to_input() {
 
                 if (globals.program_mode == PROGRAM_MODE_END) {
                     if (event.key_pressed && !event.is_key_repeat) {
+                        if (!globals.menu_fade.active) {
+                            start_menu_fade(globals.current_world);
+                        }
+
+#if 0
                         globals.program_mode = PROGRAM_MODE_MAIN_MENU;
                         //switch_to_random_world(globals.start_level_width);
                         destroy_world(globals.current_world);
@@ -191,6 +233,7 @@ static void respond_to_input() {
                         globals.current_world = globals.menu_world;
                         globals.num_restarts_for_current_world = 0;
                         // TODO: Save the high scores to a file.
+#endif
                     }
                 }
             } break;
@@ -479,6 +522,7 @@ int main(int argc, char *argv[]) {
         }
         
         update_time();
+        adjust_fps_cap_based_on_performance();
         
         for (int i = 0; i < ArrayCount(key_states); i++) {
             Key_State *state = &key_states[i];
@@ -497,11 +541,13 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        update_menu_fade((float)globals.time_info.delta_time_seconds);
+        
         if (globals.window_width > 0 && globals.window_height > 0) {
             set_framebuffer(globals.offscreen_buffer);
             set_viewport(0, 0, globals.render_width, globals.render_height);
             set_shader(NULL);
-            
+
             if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
                 draw_main_menu();
             } else if (globals.program_mode == PROGRAM_MODE_GAME) {
@@ -512,6 +558,10 @@ int main(int argc, char *argv[]) {
                     draw_world(globals.current_world, true);
                 }
                 draw_end_screen();
+            }
+
+            if (globals.menu_fade.active) {
+                draw_menu_fade_overlay();
             }
 
             blit_framebuffer_to_back_buffer_with_letter_boxing(globals.offscreen_buffer);
@@ -530,4 +580,67 @@ int main(int argc, char *argv[]) {
     }
     
     return 0;
+}
+
+
+void start_menu_fade(World *world) {
+    globals.menu_fade.active = true;
+    globals.menu_fade.timer = 0.0f;
+    globals.menu_fade.fading_in = false;
+    globals.menu_fade.last_world = world;
+}
+
+void update_menu_fade(float dt) {
+    if (!globals.menu_fade.active) return;
+
+    globals.menu_fade.timer += dt;
+    if (globals.menu_fade.timer >= globals.menu_fade.duration) {
+        globals.menu_fade.timer = globals.menu_fade.duration;
+
+        if (!globals.menu_fade.fading_in) {
+            // Switch to menu now that fade out is done
+            globals.program_mode = PROGRAM_MODE_MAIN_MENU;
+
+            destroy_world(globals.current_world);
+            destroy_world(globals.copy_of_current_world);
+            globals.copy_of_current_world = NULL;
+            globals.current_world = globals.menu_world;
+            globals.num_restarts_for_current_world = 0;
+            
+            globals.menu_fade.fading_in = true;
+            globals.menu_fade.timer = 0.0f;
+            globals.menu_fade.last_world = globals.menu_world;
+        } else {
+            globals.menu_fade.active = false; // done fading in
+            globals.menu_fade.last_world = NULL;
+        }
+    }
+}
+
+void draw_menu_fade_overlay() {
+    float alpha = 0.0f;
+
+    if (!globals.menu_fade.active) return;
+
+    if (!globals.menu_fade.fading_in) {
+        alpha = globals.menu_fade.timer / globals.menu_fade.duration;  // fade out
+    } else {
+        alpha = 1.0f - (globals.menu_fade.timer / globals.menu_fade.duration); // fade in
+    }
+
+    // Draw the last world behind the fade
+    if (globals.menu_fade.last_world) {
+        draw_world(globals.menu_fade.last_world, true); // skip HUD
+    }
+
+    // Draw fade overlay
+    set_shader(globals.shader_color);
+    rendering_2d(globals.render_width, globals.render_height);
+    immediate_begin();
+    immediate_quad(
+        v2(0, 0),
+        v2((float)globals.render_width, (float)globals.render_height),
+        v4(0, 0, 0, alpha)
+                   );
+    immediate_flush();
 }

@@ -12,6 +12,15 @@ struct Framebuffer;
 struct World;
 
 const int MAX_RESTARTS = 3;
+const int MAX_FPS_CAP = 120;
+
+struct Fade_Transition {
+    bool active = false;
+    float timer = 0.0f;
+    float duration = 1.0f;
+    bool fading_in = true;
+    World *last_world = NULL;
+};
 
 enum Program_Mode {
     PROGRAM_MODE_MAIN_MENU,
@@ -73,6 +82,8 @@ struct Global_Variables {
     int start_level_width = 30;
 
     int num_frames_since_startup = 0;
+
+    Fade_Transition menu_fade;
 };
 
 extern Global_Variables globals;
@@ -91,3 +102,7 @@ void switch_to_next_world();
 void toggle_menu();
 bool switch_to_random_world(int total_width);
 bool restart_current_world();
+
+void start_menu_fade(World *world);
+void update_menu_fade(float dt);
+void draw_menu_fade_overlay();

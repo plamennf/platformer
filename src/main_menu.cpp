@@ -36,6 +36,10 @@ static int get_x_pad() {
     return x_pad;
 }
 
+static bool menu_can_accept_input() {
+    return !globals.menu_fade.active || globals.menu_fade.fading_in == false;
+}
+
 void toggle_menu() {
     if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
         globals.program_mode = PROGRAM_MODE_GAME;
@@ -50,6 +54,8 @@ void toggle_menu() {
 }
 
 static void advance_menu_choice(int delta) {
+    if (!menu_can_accept_input()) return;
+    
     current_menu_choice += delta;
 
     if (current_menu_choice < 0)                 current_menu_choice += menu_items_total;
@@ -60,6 +66,8 @@ static void advance_menu_choice(int delta) {
 }
 
 static void handle_enter() {
+    if (!menu_can_accept_input()) return;
+    
     int choice = current_menu_choice;
     
     if (choice == index_resume) {

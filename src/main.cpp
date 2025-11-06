@@ -531,6 +531,9 @@ int main(int argc, char *argv[]) {
     void enable_dpi_awareness();
     enable_dpi_awareness();
 #endif
+
+    init_log();
+    defer { close_log(); };
     
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         logprintf("Failed to initialize SDL!\n");

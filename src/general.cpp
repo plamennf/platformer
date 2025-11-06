@@ -8,6 +8,8 @@
 #include <Windows.h>
 #endif
 
+static FILE *log_file = NULL;
+
 u64 round_to_next_power_of_2(u64 v) {
     v--;
     v |= v >> 1;
@@ -254,6 +256,24 @@ void clamp(int *value, int min, int max) {
     if (*value > max) *value = max;
 }
 
+void init_log() {
+    if (!log_file) {
+        log_file = fopen("log.txt", "wt");
+        if (!log_file) {
+            fprintf(stderr, "Failed to open log.txt for writing\n");
+            fflush(stderr);
+        }
+    }
+}
+
+void close_log() {
+    if (log_file) {
+        fflush(log_file);
+        fclose(log_file);
+        log_file = NULL;
+    }
+}
+
 void logprintf(char *fmt, ...) {
     char buf[4096];
 
@@ -264,6 +284,11 @@ void logprintf(char *fmt, ...) {
 
     fprintf(stdout, "%s", buf);
     fflush(stdout);
+
+    if (log_file) {
+        fprintf(log_file, "%s", buf);
+        fflush(log_file);
+    }
 }
 
 char *read_entire_file(char *filepath, s64 *length_pointer, bool zero_terminate) {

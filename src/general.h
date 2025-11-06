@@ -74,6 +74,8 @@ u64 get_hash(char *str);
 void clamp(float *value, float min, float max);
 void clamp(int *value, int min, int max);
 
+void init_log();
+void close_log();
 void logprintf(char *fmt, ...);
 
 char *read_entire_file(char *filepath, s64 *length_pointer = NULL, bool zero_terminate = true);

@@ -3,7 +3,8 @@
 #ifdef RENDER_OPENGL
 
 #include "rendering.h"
-#include "glex.h"
+
+#include <GL/glew.h>
 
 struct Texture {
     int width;
@@ -42,7 +43,7 @@ struct Immediate_Vertex {
     Vector2 uv;
 };
 
-static Window_Type window;
+static SDL_Window *window;
 static Shader *current_shader;
 
 const int MAX_IMMEDIATE_VERTICES = 2400;
@@ -51,20 +52,30 @@ static int num_immediate_vertices;
 
 static GLuint immediate_vbo;
 
-bool init_rendering(Window_Type _window, bool vsync) {
+bool init_rendering(SDL_Window *_window, bool vsync) {
     window = _window;
-    
-    if (!os_create_opengl_context(window, 3, 3, true)) return false;
-    if (os_opengl_set_vsync(vsync)) {
-        if (vsync) {
-            logprintf("vsync: on\n");
-        } else {
-            logprintf("vsync: off\n");
-        }
-    } else {
-        logprintf("Couldn't set vsync");
+
+    globals.gl_context = SDL_GL_CreateContext(window);
+    if (!globals.gl_context) {
+        logprintf("Failed to create opengl context!\n");
+        SDL_DestroyWindow(globals.window);
+        return false;
     }
-    init_gl_extensions();
+    SDL_GL_MakeCurrent(globals.window, globals.gl_context);
+
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        logprintf("Failed to initialize GLEW!\n");
+        return false;
+    }
+
+    if (vsync) {
+        SDL_GL_SetSwapInterval(1);
+        logprintf("vsync: on\n");
+    } else {
+        SDL_GL_SetSwapInterval(0);
+        logprintf("vsync: off\n");
+    }
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -90,7 +101,7 @@ bool init_rendering(Window_Type _window, bool vsync) {
 }
 
 void swap_buffers() {
-    os_opengl_swap_buffers(window);
+    SDL_GL_SwapWindow(window);
 }
 
 void set_viewport(int x, int y, int width, int height) {

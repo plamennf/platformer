@@ -5,7 +5,7 @@
 #include "array.h"
 #include "hash_table.h"
 
-#include "os_specific.h"
+#include <SDL3/SDL.h>
 
 struct Shader;
 struct Framebuffer;
@@ -31,14 +31,14 @@ enum Program_Mode {
 };
 
 struct Time_Info {
-    u64 last_time = 0;
+    s64 last_time = 0;
 
-    u64 real_world_time = 0;
-    u64 delta_time = 0;
+    s64 real_world_time = 0;
+    s64 delta_time = 0;
     double delta_time_seconds = 0.0;
 
     // For fps debug info.
-    u64 num_frames_since_last_fps_update = 0;
+    s64 num_frames_since_last_fps_update = 0;
     double accumulated_fps_dt = 0.0;
     double fps_dt = 0.0;
 
@@ -49,12 +49,13 @@ struct Time_Info {
 };
 
 struct Global_Variables {
-    Array <Event> events_this_frame;
-    Array <Window_Resize_Record> window_resizes;
+    //Array <Event> events_this_frame;
+    //Array <Window_Resize_Record> window_resizes;
     bool should_quit_game = false;
     bool should_vsync = true;
     
-    Window_Type window = NULL;
+    SDL_Window *window = NULL;
+    SDL_GLContext gl_context = NULL;
     int window_width = 0;
     int window_height = 0;
 

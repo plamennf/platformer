@@ -47,7 +47,7 @@ static Loaded_Font *get_loaded_font(char *name) {
     char full_path[1024]; bool full_path_exists = false;
     for (int i = 0; i < ArrayCount(extensions); i++) {
         snprintf(full_path, sizeof(full_path), "data/fonts/%s.%s", name, extensions[i]);
-        if (os_file_exists(full_path)) {
+        if (file_exists(full_path)) {
             full_path_exists = true;
             break;
         }

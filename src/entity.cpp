@@ -13,22 +13,18 @@ void update_single_hero(Hero *hero, float dt) {
     assert(tilemap);
     
     float input_x = 0.0f;
-    if (is_key_down('A')) { input_x -= 1.0f; hero->is_facing_right = false; }
-    if (is_key_down('D')) { input_x += 1.0f; hero->is_facing_right = true; }
+    if (is_key_down(SDL_SCANCODE_A)) { input_x -= 1.0f; hero->is_facing_right = false; }
+    if (is_key_down(SDL_SCANCODE_D)) { input_x += 1.0f; hero->is_facing_right = true; }
 
     hero->velocity.x = input_x * MOVE_SPEED;
 
-    if (is_key_down('W') && hero->is_on_ground) {
+    if (is_key_down(SDL_SCANCODE_W) && hero->is_on_ground) {
         hero->velocity.y   = JUMP_FORCE;
         hero->is_on_ground = false;
         emit_jump_particles(world->particle_system, hero->position);
     }
 
     hero->velocity.y += GRAVITY * dt;
-
-    if (!hero->is_on_ground && is_key_pressed('S')) {
-        hero->velocity.y += GRAVITY * (FAST_FALL_MULTIPLIER - 1.0f) * dt;
-    }
 
     hero->velocity.y = Max(hero->velocity.y, MAX_FALL_SPEED);
 

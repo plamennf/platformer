@@ -41,7 +41,7 @@ Shader *find_or_load_shader(char *name) {
     
     char full_path[256];
     snprintf(full_path, sizeof(full_path), "%s/%s.%s", shader_directory, name, shader_extension);
-    if (!os_file_exists(full_path)) {
+    if (!file_exists(full_path)) {
         logprintf("Unable to find file '%s' in '%s'!\n", name, shader_directory);
         return NULL;
     }

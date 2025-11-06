@@ -1,6 +1,6 @@
 #pragma once
 
-bool init_rendering(Window_Type window, bool vsync);
+bool init_rendering(SDL_Window *window, bool vsync);
 void swap_buffers();
 
 void set_viewport(int x, int y, int width, int height);

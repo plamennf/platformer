@@ -28,7 +28,7 @@ struct Key_State {
     bool changed;
 };
 
-static Key_State key_states[KEY_COUNT];
+static Key_State key_states[SDL_SCANCODE_COUNT];
 
 bool is_key_down(int key_code) {
     return key_states[key_code].is_down;
@@ -53,7 +53,8 @@ u64 seconds_to_nanoseconds(double seconds) {
 }
 
 static void update_time() {
-    u64 now_time = os_get_time_nanoseconds();
+    s64 now_time;
+    SDL_GetCurrentTime(&now_time);
 
     globals.time_info.delta_time       = now_time - globals.time_info.last_time;
     globals.time_info.real_world_time += globals.time_info.delta_time;
@@ -157,44 +158,63 @@ static void draw_debug_hud() {
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
 }
 
+static void toggle_fullscreen(SDL_Window *window) {
+    bool is_fullscreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
+
+    if (is_fullscreen) {
+        SDL_SetWindowFullscreen(window, false);
+        SDL_SetWindowBordered(window, true);
+        SDL_SetWindowResizable(window, true);
+        //SDL_SetWindowSize(window, 1280, 720); // optional
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    } else {
+        SDL_SetWindowFullscreen(window, true);
+        SDL_SetWindowBordered(window, false);
+    }
+
+    SDL_GetWindowSize(window, &globals.window_width, &globals.window_height);
+    init_framebuffer();
+}
+
 static void respond_to_input() {
-    for (auto event : globals.events_this_frame) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
         switch (event.type) {
-            case EVENT_TYPE_QUIT: {
+            case SDL_EVENT_QUIT: {
                 globals.should_quit_game = true;
             } break;
 
-            case EVENT_TYPE_KEYBOARD: {
-                Key_State *state = &key_states[event.key_code];
-                state->changed   = state->is_down != event.key_pressed;
-                state->is_down   = event.key_pressed;
+            case SDL_EVENT_KEY_DOWN:
+            case SDL_EVENT_KEY_UP: {
+                bool is_down = event.key.down;
+                
+                Key_State *state = &key_states[event.key.scancode];
+                state->changed   = state->is_down != is_down;
+                state->is_down   = is_down;
 
-                if (event.key_pressed && !event.is_key_repeat) {
-                    if (event.key_code == KEY_F11) {
-                        os_window_toggle_fullscreen(globals.window);
+                if (is_down && !event.key.repeat) {
+                    if (event.key.scancode == SDL_SCANCODE_F11) {
+                        toggle_fullscreen(globals.window);
                     }
                 }
 
                 if (globals.program_mode == PROGRAM_MODE_END) {
-                    if (event.key_pressed && !event.is_key_repeat) {
+                    if (is_down && !event.key.repeat) {
                         if (!globals.menu_fade.active) {
                             start_menu_fade(globals.current_world);
                         }
                     }
                 }
             } break;
+
+            case SDL_EVENT_WINDOW_RESIZED: {
+                globals.window_width  = event.window.data1;
+                globals.window_height = event.window.data2;
+
+                init_framebuffer();
+            }
         }
     }
-
-    for (auto record : globals.window_resizes) {
-        if (record.window != globals.window) continue;
-
-        globals.window_width  = record.width;
-        globals.window_height = record.height;
-
-        init_framebuffer();
-    }
-    globals.window_resizes.count = 0;
 }
 
 static void generate_random_level(World *world, int level_width, int level_height) {
@@ -361,7 +381,7 @@ bool switch_to_random_world(int total_width) {
 
     globals.current_world->camera->intro_active = true;
     globals.current_world->camera->intro_timer = 0.0f;
-    globals.current_world->camera->intro_duration = 4.0f;
+    globals.current_world->camera->intro_duration = 3.0f;
 
     float world_w = (float)globals.current_world->size.x;
     float world_h = (float)globals.current_world->size.y;
@@ -476,13 +496,44 @@ static void draw_end_screen() {
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
 }
 
+static SDL_Window *create_window(int width, int height, char *title) {
+    Uint32 window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+    
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    SDL_Window *window = SDL_CreateWindow(title, width, height, window_flags);
+    if (!window) {
+        logprintf("Failed to create window!\n");
+        return NULL;
+    }
+    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+    return window;
+}
+
 int main(int argc, char *argv[]) {
-    os_init();
-    srand((u32)os_get_time_nanoseconds());
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        logprintf("Failed to initialize SDL!\n");
+        return 1;
+    }
+    defer { SDL_Quit(); };
+    
+    s64 srand_time;
+    SDL_GetCurrentTime(&srand_time);
+    srand((u32)srand_time);
 
     globals.window_width  = 1600;
     globals.window_height = 900;
-    globals.window = os_create_window(globals.window_width, globals.window_height, "Platformer!");
+    globals.window = create_window(globals.window_width, globals.window_height, "Platformer!");
     if (!globals.window) return 1;
     if (!init_rendering(globals.window, globals.should_vsync)) return 1;
     init_resource_manager(); // !!! Need to init resource manager before shaders and textures !!!
@@ -497,8 +548,9 @@ int main(int argc, char *argv[]) {
     int current_level_width = globals.start_level_width;
     //switch_to_random_world(current_level_width);
     
-    globals.time_info.last_time = os_get_time_nanoseconds();
-    u64 last_time = os_get_time_nanoseconds();
+    SDL_GetCurrentTime(&globals.time_info.last_time);
+    s64 last_time;
+    SDL_GetCurrentTime(&last_time);
     while (!globals.should_quit_game) {
         globals.num_frames_since_startup++;
         
@@ -531,15 +583,14 @@ int main(int argc, char *argv[]) {
             state->changed   = false;
         }
 
-        os_update_window_events();
         respond_to_input();
 
         if (globals.program_mode == PROGRAM_MODE_GAME) {
             update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
 
-            if (is_key_pressed(KEY_ESCAPE)) {
+            if (is_key_pressed(SDL_SCANCODE_ESCAPE)) {
                 toggle_menu();
-            } else if (is_key_pressed('F')) {
+            } else if (is_key_pressed(SDL_SCANCODE_F)) {
                 globals.draw_debug_hud = !globals.draw_debug_hud;
             }
         }
@@ -576,9 +627,13 @@ int main(int argc, char *argv[]) {
 
         do_hotloading();
 
-        u64 fps_cap_nanoseconds = 1000000000 / globals.time_info.fps_cap;
-    
-        while (os_get_time_nanoseconds() <= last_time + fps_cap_nanoseconds) {
+        s64 fps_cap_nanoseconds = 1000000000 / globals.time_info.fps_cap;
+
+        for (;;) {
+            //while (os_get_time_nanoseconds() <= last_time + fps_cap_nanoseconds) {
+            s64 time;
+            SDL_GetCurrentTime(&time);
+            if (time > last_time + fps_cap_nanoseconds) break;
             // @TODO: Maybe sleep.
         }
         last_time += fps_cap_nanoseconds;

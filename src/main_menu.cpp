@@ -113,7 +113,7 @@ static int draw_item(char *text, Dynamic_Font *font, int center_x, int y, Vector
     if (index == current_menu_choice) {
         float pad_x = 20.0f;
         float pad_y = font->character_height * 0.4f;
-        float text_width = font->get_string_width_in_pixels(text);
+        float text_width = (float)font->get_string_width_in_pixels(text);
         float rect_height = font->character_height * 1.4f;
 
         Vector4 bg_color = v4(1.0f, 0.85f, 0.4f, 0.15f);
@@ -134,7 +134,7 @@ static int draw_item(char *text, Dynamic_Font *font, int center_x, int y, Vector
 
         set_shader(globals.shader_text);
         
-        draw_text(font, text, x_pad, y - font->character_height * 0.05f, MENU_COLOR_SHADOW);
+        draw_text(font, text, x_pad, (int)(y - font->character_height * 0.05f), MENU_COLOR_SHADOW);
         draw_text(font, text, x_pad, y, animated_color);
     } else {
         set_shader(globals.shader_text);
@@ -301,16 +301,16 @@ void draw_main_menu() {
 
         case MENU_PAGE_CONTROLS: {
             draw_controls();
-            if (is_key_pressed(KEY_ESCAPE)) {
+            if (is_key_pressed(SDL_SCANCODE_ESCAPE)) {
                 current_menu_page = MENU_PAGE_MAIN;
             }
         } break;
     }
 
-    if (is_key_pressed(KEY_UP_ARROW))   advance_menu_choice(-1);
-    if (is_key_pressed(KEY_DOWN_ARROW)) advance_menu_choice(+1);
+    if (is_key_pressed(SDL_SCANCODE_UP))   advance_menu_choice(-1);
+    if (is_key_pressed(SDL_SCANCODE_DOWN)) advance_menu_choice(+1);
     
-    if (is_key_pressed(KEY_ENTER)) {
+    if (is_key_pressed(SDL_SCANCODE_RETURN) || is_key_pressed(SDL_SCANCODE_KP_ENTER)) {
         handle_enter();
     }
 }

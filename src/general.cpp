@@ -4,6 +4,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 u64 round_to_next_power_of_2(u64 v) {
     v--;
     v |= v >> 1;
@@ -284,6 +288,13 @@ char *read_entire_file(char *filepath, s64 *length_pointer, bool zero_terminate)
     return result;
 }
 
+bool file_exists(char *filepath) {
+    FILE *file = fopen(filepath, "rb");
+    if (!file) return false;
+    fclose(file);
+    return true;
+}
+
 char *break_by_space(char *s) {
     if (!s) return NULL;
     if (*s == 0) return NULL;
@@ -329,3 +340,26 @@ float fract(float value) {
 float random_float() {
     return (float)rand() / (float)RAND_MAX;
 }
+
+
+#ifdef _WIN32
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	__declspec(dllexport) DWORD NvOptimusEnablement = 1;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+
+#ifdef __cplusplus
+}
+#endif
+
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int show_code) {
+    int main(int argc, char *argv[]);
+#ifdef COMPILER_MSVC
+    return main(__argc, __argv);
+#endif
+}
+
+#endif

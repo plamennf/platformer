@@ -4,6 +4,24 @@
 #include "entity.h"
 
 void update_camera(Camera *camera, World *world, float dt) {
+    if (camera->intro_active) {
+        camera->intro_timer += dt;
+        float t = camera->intro_timer / camera->intro_duration;
+        if (t >= 1.0f) {
+            t = 1.0f;
+            camera->intro_active = false;
+        }
+
+        // Smooth interpolation (ease out)
+        float smooth_t = t * t * (3.0f - 2.0f * t);
+
+        camera->position = lerp(camera->intro_start_pos, camera->intro_end_pos, smooth_t);
+
+        float zoom_t = powf(smooth_t, 0.7f);
+        camera->zoom     = lerp(camera->intro_start_zoom, camera->intro_end_zoom, smooth_t);
+        return; // Skip normal camera logic while intro is active
+    }
+    
     Entity *e = get_entity_by_id(world, camera->following_id);
     if (!e) return;
 
@@ -43,6 +61,10 @@ void update_camera(Camera *camera, World *world, float dt) {
 
 Matrix4 get_world_to_view_matrix(Camera *camera, World *world) {
     Matrix4 m = matrix4_identity();
+
+    float z = camera->zoom;
+    m._11 = z;
+    m._22 = z;
     
     Vector2 position = camera->position - v2(VIEW_AREA_WIDTH * 0.5f, VIEW_AREA_HEIGHT * 0.5f);
     Vector2 screen_space_position = world_space_to_screen_space(world, position);
@@ -50,8 +72,8 @@ Matrix4 get_world_to_view_matrix(Camera *camera, World *world) {
     screen_space_position.x = roundf(screen_space_position.x);
     screen_space_position.y = roundf(screen_space_position.y);
     
-    m._14 = -screen_space_position.x;
-    m._24 = -screen_space_position.y;
+    m._14 = -screen_space_position.x * z;
+    m._24 = -screen_space_position.y * z;
     m._34 = 0.0f;
 
     return m;

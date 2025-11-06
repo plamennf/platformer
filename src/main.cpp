@@ -359,6 +359,34 @@ bool switch_to_random_world(int total_width) {
     globals.current_world->camera->dead_zone_size = v2(VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT) * 0.1f;
     globals.current_world->camera->smooth_factor  = 0.95f;
 
+    globals.current_world->camera->intro_active = true;
+    globals.current_world->camera->intro_timer = 0.0f;
+    globals.current_world->camera->intro_duration = 4.0f;
+
+    float world_w = (float)globals.current_world->size.x;
+    float world_h = (float)globals.current_world->size.y;
+    float aspect = (float)globals.render_width / globals.render_height;
+
+    float visible_w = (float)VIEW_AREA_WIDTH;
+    float visible_h = (float)VIEW_AREA_HEIGHT;
+
+    float zoom_x = visible_w / world_w;
+    float zoom_y = visible_h / world_h;
+
+    float zoom_to_fit = Min(zoom_x, zoom_y) * 1.0f;
+    
+    globals.current_world->camera->intro_start_zoom = zoom_to_fit;
+    globals.current_world->camera->intro_end_zoom = 1.0f;
+
+    Vector2 intro_start_pos = v2(world_w * 0.5f, world_h * 0.5f) - v2(visible_w * 0.45f, visible_h * 0.5f);
+    if (intro_start_pos.x < 0.0f) intro_start_pos.x = 0.0f;
+    if (intro_start_pos.y < 0.0f) intro_start_pos.y = 0.0f;
+    globals.current_world->camera->intro_start_pos = intro_start_pos;
+    globals.current_world->camera->intro_end_pos = v2(visible_w * 0.5f, visible_h * 0.5f);
+
+    globals.current_world->camera->zoom = globals.current_world->camera->intro_start_zoom;
+    globals.current_world->camera->position = globals.current_world->camera->intro_start_pos;
+    
     globals.current_world_index++;
     
     Level_Fade level_fade   = {};

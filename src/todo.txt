@@ -1,11 +1,10 @@
-- When starting a level start the camera zoomed out showing the whole level and then pan to the player while zooming in.
 - Improve menu option colors to stand out more
-- Add audio
-- Package the assets into a single package file and load it at startup. The package shouldn't be big.
 - Change the backend to SDL3 and GLEW on every system even windows. Remove glex.h and glex.cpp files which handle opengl extension function loading. And remove os_windows.cpp functions.
-- Make a build.macos and run.macos file
-- Save the high scores to the package file and other text file if using a developer buil.
+- Add audio
+- Package the assets into the headers which are included when building. Because the assets are a few fonts and 5 textures. This also requires to change the font and shader code to allow reading from memory instead of from a file.
+- Save the high scores to a file. Preferably binary so that the players can't change the scores easily.
 - Remove shader hotloading in distribution builds.
+- Make a build.macos and run.macos file
 
 For update after releasing the game:
 - Add more colors to the game(tiles and enemies)

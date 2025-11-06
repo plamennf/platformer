@@ -28,7 +28,10 @@ void init_world(World *world, Vector2i size) {
 }
 
 void update_world(World *world, float dt) {
-    if (!world->level_intro) {
+    bool camera_intro = false;
+    if (world && world->camera && world->camera->intro_active) camera_intro = true;
+    
+    if (!world->level_intro && !camera_intro) {
         for (Enemy *enemy : world->by_type._Enemy) {
             if (enemy->scheduled_for_destruction) continue;
 
@@ -71,7 +74,7 @@ void update_world(World *world, float dt) {
         }
     }
 
-    if (!world->level_intro) {
+    if (!world->level_intro && !camera_intro) {
         update_particles(world->particle_system, dt);
         
         // Is it safe to do this here???

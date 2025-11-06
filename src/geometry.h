@@ -7,6 +7,10 @@
 const float PI = 3.14159265359f;
 const float TAU = 6.28318530718f;
 
+inline float lerp(float a, float b, float t) {
+    return a + t * (b - a);
+}
+
 inline int absolute_value(int value) {
     if (value < 0) return -value;
     return value;
@@ -262,6 +266,10 @@ inline Vector2 maxv(Vector2 a, Vector2 b) {
 
 inline Vector2 clampv(Vector2 v, Vector2 a, Vector2 b) {
     return maxv(a, minv(a, b));
+}
+
+inline Vector2 lerp(Vector2 a, Vector2 b, float t) {
+    return a + t * (b - a);
 }
 
 struct Vector3 {

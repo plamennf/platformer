@@ -77,7 +77,6 @@ struct Global_Variables {
     World *menu_world = NULL;    
     World *current_world = NULL;
     World *copy_of_current_world = NULL;
-    //bool is_in_pause_menu = false;
     int num_restarts_for_current_world = 0;
     int current_fail_msg_index = -1;
     
@@ -87,6 +86,8 @@ struct Global_Variables {
     int start_level_width = 30;
 
     int num_frames_since_startup = 0;
+
+    bool draw_debug_hud = false;
 
     Fade_Transition menu_fade;
 

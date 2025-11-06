@@ -217,6 +217,8 @@ static void draw_pair(char *pair_a, char *pair_b, Dynamic_Font *font, int cursor
 }
 
 static void draw_controls() {
+    clear_framebuffer(0.1f, 0.1f, 0.1f, 1.0f);
+    
     int BIG_FONT_SIZE = (int)(globals.render_height * 0.0725f);
     auto title_font   = get_font_at_size("KarminaBoldItalic", (int)(BIG_FONT_SIZE * 1.6f));
     auto body_font    = get_font_at_size("KarminaBold", (int)(BIG_FONT_SIZE * 0.9f));
@@ -243,6 +245,7 @@ static void draw_controls() {
         { "Move Left", "A" },
         { "Move Right", "D" },
         { "Jump", "W" },
+        { "Toggle FPS hud", "F" },
     };
 
     int cursor_y = (int)(globals.render_height * 0.62);

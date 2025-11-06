@@ -146,14 +146,6 @@ static void draw_debug_hud() {
     int fps = 0;
     if (globals.time_info.fps_dt > 0.0) {
         fps = (int)(1.0 / globals.time_info.fps_dt);
-
-#if 0
-        // Lower the fps limit if the user's machine can't hit the required fps.
-        // @TODO: Put this somewhere better not fucking draw_debug_hud ffs.
-        if (fps < globals.time_info.fps_cap) {
-            globals.time_info.fps_cap /= 2;
-        }
-#endif
     }
     
     int font_size = (int)(0.03f * globals.render_height);
@@ -161,45 +153,8 @@ static void draw_debug_hud() {
     char text[128];
     snprintf(text, sizeof(text), "FPS: %d", fps);
     int x = globals.render_width  - font->get_string_width_in_pixels(text);
-    int y = globals.render_height - font->character_height;
+    int y = globals.render_height - 2 * font->character_height;
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
-}
-
-static void init_test_world() {
-    globals.current_world = new World();
-    init_world(globals.current_world, v2i(32, 18));
-
-    globals.current_world->tilemap = new Tilemap();
-    if (!load_tilemap(globals.current_world->tilemap, "data/tilemaps/test.tm")) {
-        exit(1);
-    }
-    
-    Hero *hero     = make_hero(globals.current_world);
-    hero->position = v2(0, 1);
-    hero->size     = v2(1, 1);
-    hero->color    = v4(1, 0, 1, 1);
-
-    Door *door     = make_door(globals.current_world);
-    door->position = v2(31, 12);
-    door->size     = v2(1, 2);
-    
-    globals.current_world->camera                 = new Camera();
-    globals.current_world->camera->position       = v2(18, 9);
-    globals.current_world->camera->target         = v2(0, 0);
-    globals.current_world->camera->following_id   = hero->id;
-    globals.current_world->camera->dead_zone_size = v2(VIEW_AREA_WIDTH, VIEW_AREA_HEIGHT) * 0.1f;
-    globals.current_world->camera->smooth_factor  = 0.95f;
-
-    Enemy *enemy    = make_enemy(globals.current_world);
-    enemy->position = v2(10, 1.5f);
-    enemy->color    = v4(1, 1, 1, 1);
-
-    Pickup *pickup   = make_pickup(globals.current_world);
-    pickup->position = v2(25.5f, 6.5f);
-    pickup->color    = v4(1.0f, 1.0f, 0.0f, 1.0f);
-    pickup->radius   = 0.5f;
-
-    globals.current_world->num_pickups_needed_to_unlock_door = globals.current_world->by_type._Pickup.count;
 }
 
 static void respond_to_input() {
@@ -225,17 +180,6 @@ static void respond_to_input() {
                         if (!globals.menu_fade.active) {
                             start_menu_fade(globals.current_world);
                         }
-
-#if 0
-                        globals.program_mode = PROGRAM_MODE_MAIN_MENU;
-                        //switch_to_random_world(globals.start_level_width);
-                        destroy_world(globals.current_world);
-                        destroy_world(globals.copy_of_current_world);
-                        globals.copy_of_current_world = NULL;
-                        globals.current_world = globals.menu_world;
-                        globals.num_restarts_for_current_world = 0;
-                        // TODO: Save the high scores to a file.
-#endif
                     }
                 }
             } break;
@@ -335,6 +279,12 @@ static void generate_random_level(World *world, int level_width, int level_heigh
     int door_x_end = level_width - 1;
     int door_x_start = Max(0, door_x_end - door_platform_length + 1);
 
+    if (door_x_start - platforms[platforms.count - 1].x_end >= 4) {
+        door_x_start = platforms[platforms.count - 1].x_end + 3;
+        door_x_end = level_width - 1;
+        door_platform_length = door_x_end - door_x_start;
+    }
+    
     for (int x = door_x_start; x <= door_x_end; x++) {
         tilemap->tiles[door_y * level_width + x] = 1;
     }
@@ -371,7 +321,7 @@ static void generate_random_level(World *world, int level_width, int level_heigh
     }
         
     Door *door = make_door(world);
-    door->position = v2(door_x_start + 2.0f, door_y + 1.0f);
+    door->position = v2((float)door_x_end, door_y + 1.0f);
     door->size     = v2(1, 2);
     door->locked   = true;
 
@@ -449,8 +399,6 @@ bool restart_current_world() {
 }
 
 static void draw_end_screen() {
-    //clear_framebuffer(0, 0, 0, 1);
-
     set_shader(globals.shader_color);
     rendering_2d(globals.render_width, globals.render_height, matrix4_identity());
     
@@ -484,14 +432,19 @@ static void draw_end_screen() {
     int font_size = (int)(0.05f * globals.render_height);
     Dynamic_Font *font = get_font_at_size("KarminaBoldItalic", font_size);
     char text[256];
-    snprintf(text, sizeof(text), "You managed to complete %d levels!", globals.num_worlds_completed);
+    snprintf(text, sizeof(text), "You managed to complete %d %s!", globals.num_worlds_completed, globals.num_worlds_completed == 1 ? "level" : "levels");
     int x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
-    int y = globals.render_height / 2;
+    int y = (int)(globals.render_height * 0.75f);
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
     
     snprintf(text, sizeof(text), "%s", fail_msgs[globals.current_fail_msg_index]);
     x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
     y -= font->character_height;
+    draw_text(font, text, x, y, v4(1, 1, 1, 1));
+
+    snprintf(text, sizeof(text), "Press any key to return back to the menu");
+    x = (globals.render_width - font->get_string_width_in_pixels(text)) / 2;
+    y = (int)(globals.render_height * 0.25f);
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
 }
 
@@ -535,6 +488,7 @@ int main(int argc, char *argv[]) {
             } else {
                 current_level_width += 30;
                 switch_to_random_world(current_level_width);
+                globals.num_worlds_completed++;
             }
 
             globals.should_switch_worlds = false;
@@ -557,6 +511,8 @@ int main(int argc, char *argv[]) {
 
             if (is_key_pressed(KEY_ESCAPE)) {
                 toggle_menu();
+            } else if (is_key_pressed('F')) {
+                globals.draw_debug_hud = !globals.draw_debug_hud;
             }
         }
 
@@ -571,7 +527,9 @@ int main(int argc, char *argv[]) {
                 draw_main_menu();
             } else if (globals.program_mode == PROGRAM_MODE_GAME) {
                 draw_world(globals.current_world);
-                draw_debug_hud();
+                if (globals.draw_debug_hud) {
+                    draw_debug_hud();
+                }
             } else if (globals.program_mode == PROGRAM_MODE_END) {
                 if (globals.current_world) {
                     draw_world(globals.current_world, true);
@@ -629,6 +587,9 @@ void update_menu_fade(float dt) {
             globals.menu_fade.fading_in = true;
             globals.menu_fade.timer = 0.0f;
             globals.menu_fade.last_world = globals.menu_world;
+
+            globals.num_worlds_completed = 0;
+            globals.current_world_index = 0;
         } else {
             globals.menu_fade.active = false; // done fading in
             globals.menu_fade.last_world = NULL;

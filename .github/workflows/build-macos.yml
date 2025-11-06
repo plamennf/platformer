@@ -27,17 +27,18 @@ jobs:
 
       - name: Build Vertune
         run: |
-          pushd build
-          clang++ -std=c++20 -O2 \
-            -I../external/include \
-            ../src/*.cpp ../src/packager/packager.cpp \
-            -L/usr/local/lib -lSDL2 -lGLEW -lfreetype -framework OpenGL \
-            -o vertune
-          popd
+             mkdir -p build
+             pushd build
+             SRC_FILES=$(find ../src -name "*.cpp")
+             clang++ -std=c++20 -O2 -I../external/include $SRC_FILES \
+             -L/usr/local/lib -lSDL2 -lGLEW -lfreetype -framework OpenGL \
+             -o vertune
+             popd
+
 
       - name: Create .app bundle
         run: |
-          rm -rf dist
+          # rm -rf dist
           mkdir -p dist/${APP_NAME}.app/Contents/MacOS
           mkdir -p dist/${APP_NAME}.app/Contents/Resources
           cp build/vertune dist/${APP_NAME}.app/Contents/MacOS/vertune

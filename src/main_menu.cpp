@@ -147,7 +147,7 @@ static int draw_item(char *text, Dynamic_Font *font, int center_x, int y, Vector
 
 static void draw_menu_choices() {
     int BIG_FONT_SIZE = (int)(globals.render_height * 0.0725f);
-    auto body_font    = get_font_at_size("KarminaBold", (int)(BIG_FONT_SIZE * 0.9f));
+    auto body_font    = get_font_at_size("Lora-Bold", (int)(BIG_FONT_SIZE * 0.9f));
     
     set_shader(globals.shader_text);
     rendering_2d(globals.render_width, globals.render_height);
@@ -211,7 +211,7 @@ static void draw_title() {
     set_depth_test_mode(DEPTH_TEST_OFF);
 
     int BIG_FONT_SIZE = (int)(globals.render_height * 0.0725f);
-    auto title_font = get_font_at_size("KarminaBoldItalic", (int)(BIG_FONT_SIZE * 1.6f));
+    auto title_font = get_font_at_size("Lora-BoldItalic", (int)(BIG_FONT_SIZE * 1.6f));
 
     Dynamic_Font *font = title_font;
     char *text = "Vertune";
@@ -236,8 +236,8 @@ static void draw_controls() {
     clear_framebuffer(0.1f, 0.1f, 0.1f, 1.0f);
     
     int BIG_FONT_SIZE = (int)(globals.render_height * 0.0725f);
-    auto title_font   = get_font_at_size("KarminaBoldItalic", (int)(BIG_FONT_SIZE * 1.6f));
-    auto body_font    = get_font_at_size("KarminaBold", (int)(BIG_FONT_SIZE * 0.9f));
+    auto title_font   = get_font_at_size("Lora-BoldItalic", (int)(BIG_FONT_SIZE * 1.6f));
+    auto body_font    = get_font_at_size("Lora-Bold", (int)(BIG_FONT_SIZE * 0.9f));
 
     set_shader(globals.shader_text);
     rendering_2d(globals.render_width, globals.render_height);

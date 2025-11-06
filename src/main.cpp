@@ -199,7 +199,7 @@ static void respond_to_input() {
                 }
 
                 if (globals.program_mode == PROGRAM_MODE_END) {
-                    if (is_down && !event.key.repeat) {
+                    if (is_down && !event.key.repeat && event.key.scancode != SDL_SCANCODE_F11) {
                         if (!globals.menu_fade.active) {
                             start_menu_fade(globals.current_world);
                         }
@@ -477,8 +477,8 @@ static void draw_end_screen() {
     set_cull_mode(CULL_MODE_OFF);
     set_depth_test_mode(DEPTH_TEST_OFF);
     
-    int font_size = (int)(0.05f * globals.render_height);
-    Dynamic_Font *font = get_font_at_size("KarminaBoldItalic", font_size);
+    int font_size = (int)(0.045f * globals.render_height);
+    Dynamic_Font *font = get_font_at_size("Lora-BoldItalic", font_size);
     char text[256];
     snprintf(text, sizeof(text), "You managed to complete %d %s!", globals.num_worlds_completed, globals.num_worlds_completed == 1 ? "level" : "levels");
     int x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
@@ -487,7 +487,7 @@ static void draw_end_screen() {
     
     snprintf(text, sizeof(text), "%s", fail_msgs[globals.current_fail_msg_index]);
     x = (globals.render_width  - font->get_string_width_in_pixels(text)) / 2;
-    y -= font->character_height;
+    y -= font->character_height * 2;
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
 
     snprintf(text, sizeof(text), "Press any key to return back to the menu");

@@ -253,15 +253,17 @@ void draw_world(World *world, bool skip_hud) {
         draw_restarts(screen_space_health_position, screen_space_health_size);
 
         set_shader(globals.shader_text);
-        
-        int font_size = (int)(0.03f * globals.render_height);
-        Dynamic_Font *font = get_font_at_size("OpenSans-Regular", font_size);
-        char text[256];
-        snprintf(text, sizeof(text), "Level %d", globals.current_world_index);
-        int x = globals.render_width - font->get_string_width_in_pixels(text);
-        int y = globals.render_height - font->character_height;
-        draw_text(font, text, x, y, v4(1, 1, 1, 1));
-        
+
+        if (!world->level_fade.active) {
+            int font_size = (int)(0.08f * globals.render_height);
+            Dynamic_Font *font = get_font_at_size("OpenSans-Regular", font_size);
+            char text[256];
+            snprintf(text, sizeof(text), "Level %d", globals.current_world_index);
+            int x = globals.render_width - font->get_string_width_in_pixels(text);
+            int y = globals.render_height - font->character_height;
+            draw_text(font, text, x, y, v4(1, 1, 1, 1));
+        }
+            
         if (world->level_fade.active) {
             set_shader(globals.shader_text);
             

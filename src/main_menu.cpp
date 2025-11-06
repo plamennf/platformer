@@ -80,6 +80,7 @@ static void handle_enter() {
     if (choice == index_resume) {
         if (globals.current_world == globals.menu_world) {
             switch_to_random_world(globals.start_level_width);
+            stop_sound(globals.menu_background_music);
             play_sound(globals.level_background_music);
         }
         toggle_menu();

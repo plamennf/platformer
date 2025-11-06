@@ -15,4 +15,6 @@ void destroy_audio();
 
 Sound *load_sound(char *filepath, bool looping);
 void play_sound(Sound *sound);
+void stop_sound(Sound *sound);
+
 void free_sound(Sound *sound);

@@ -441,6 +441,7 @@ bool restart_current_world() {
     if (globals.num_restarts_for_current_world > MAX_RESTARTS) {
         globals.program_mode = PROGRAM_MODE_END;
         globals.current_fail_msg_index = rand() % ArrayCount(fail_msgs);
+        play_sound(globals.level_fail_sfx);
         return true;
     }
 
@@ -550,15 +551,20 @@ int main(int argc, char *argv[]) {
     init_audio();
     defer { destroy_audio(); };
 
+    globals.menu_background_music = load_sound("data/sounds/menu-music.wav", false);
     globals.level_background_music = load_sound("data/sounds/level-music.wav", true);
     globals.coin_pickup_sfx    = load_sound("data/sounds/coin-pickup.wav", false);
     globals.level_complete_sfx = load_sound("data/sounds/level-completed.wav", false);
     globals.death_sfx = load_sound("data/sounds/death.wav", false);
     globals.jump_sfx = load_sound("data/sounds/jump.wav", false);
+    globals.damage_sfx = load_sound("data/sounds/damage.wav", false);
+    globals.enemy_kill_sfx = load_sound("data/sounds/enemy-kill.wav", false);
+    globals.level_fail_sfx = load_sound("data/sounds/level-failed.wav", false);
     
     if (!create_menu_world()) return 1;
     globals.current_world = globals.menu_world;
-    
+    play_sound(globals.menu_background_music);
+
     int current_level_width = globals.start_level_width;
     //switch_to_random_world(current_level_width);
 
@@ -669,7 +675,9 @@ void update_menu_fade(float dt) {
         if (!globals.menu_fade.fading_in) {
             // Switch to menu now that fade out is done
             globals.program_mode = PROGRAM_MODE_MAIN_MENU;
-
+            stop_sound(globals.level_background_music);
+            play_sound(globals.menu_background_music);
+            
             destroy_world(globals.current_world);
             destroy_world(globals.copy_of_current_world);
             globals.copy_of_current_world = NULL;

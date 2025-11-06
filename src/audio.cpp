@@ -76,7 +76,7 @@ Sound *load_sound(char *filepath, bool looping) {
     Uint32 len;
 
     if (!SDL_LoadWAV(filepath, &spec, &buf, &len)) {
-        logprintf("Failed to load sound %s: %s", filepath, SDL_GetError());
+        logprintf("Failed to load sound %s: %s\n", filepath, SDL_GetError());
         return NULL;
     }
 
@@ -85,7 +85,7 @@ Sound *load_sound(char *filepath, bool looping) {
     if (SDL_BuildAudioCVT(&cvt,
                           spec.format, spec.channels, spec.freq,
                           AUDIO_F32, 2, 48000) < 0) {
-        logprintf("Failed to build audio CVT for %s: %s", filepath, SDL_GetError());
+        logprintf("Failed to build audio CVT for %s: %s\n", filepath, SDL_GetError());
         SDL_FreeWAV(buf);
         return NULL;
     }
@@ -96,7 +96,7 @@ Sound *load_sound(char *filepath, bool looping) {
     SDL_FreeWAV(buf);
 
     if (SDL_ConvertAudio(&cvt) < 0) {
-        logprintf("Audio conversion failed for %s: %s", filepath, SDL_GetError());
+        logprintf("Audio conversion failed for %s: %s\n", filepath, SDL_GetError());
         SDL_free(cvt.buf);
         return NULL;
     }
@@ -133,6 +133,12 @@ void play_sound(Sound *sound) {
     }
     current_sounds.add(sound);
     SDL_UnlockAudioDevice(audio_device);
+}
+
+void stop_sound(Sound *sound) {
+    if (!sound) return;
+
+    sound->playing = false;
 }
 
 void free_sound(Sound *sound) {

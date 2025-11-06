@@ -76,6 +76,7 @@ void update_single_hero(Hero *hero, float dt) {
                 has_jumped_on_enemy = true;
 
                 emit_stomp_particles(world->particle_system, enemy->position);
+                play_sound(globals.enemy_kill_sfx);
                 
                 break;
             }
@@ -228,6 +229,8 @@ void damage_hero(Hero *hero, double damage_amount) {
         play_sound(globals.death_sfx);
         schedule_for_destruction(hero);
         globals.should_switch_worlds = true;
+    } else {
+        play_sound(globals.damage_sfx);
     }
 }
 

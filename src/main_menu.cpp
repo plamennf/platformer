@@ -4,9 +4,10 @@
 #include "font.h"
 #include "world.h"
 
-static const Vector4 MENU_COLOR_TEXT      = v4(0.95f, 0.92f, 0.88f, 1); // warm white
-static const Vector4 MENU_COLOR_HIGHLIGHT = v4(1.0f, 0.8f, 0.3f, 1);   // golden
-static const Vector4 MENU_COLOR_SUBTEXT   = v4(0.6f, 0.65f, 0.7f, 1);
+static const Vector4 MENU_COLOR_TEXT      = v4(1.0f, 0.98f, 0.95f, 1); // clean warm white
+static const Vector4 MENU_COLOR_HIGHLIGHT = v4(1.0f, 0.45f, 0.2f, 1);  // rich orange accent
+static const Vector4 MENU_COLOR_SUBTEXT   = v4(0.45f, 0.5f, 0.6f, 1);  // muted blue-gray
+static const Vector4 MENU_COLOR_SHADOW    = v4(0.0f, 0.2f, 0.4f, 0.7f); // optional text shadow
 
 enum Menu_Page {
     MENU_PAGE_MAIN,
@@ -57,10 +58,15 @@ static void advance_menu_choice(int delta) {
     if (!menu_can_accept_input()) return;
     
     current_menu_choice += delta;
-
+    if (current_menu_choice == index_restart) {
+        if (globals.current_world == globals.menu_world) {
+            current_menu_choice += delta < 0 ? -1 : 1;
+        }
+    }
+    
     if (current_menu_choice < 0)                 current_menu_choice += menu_items_total;
     if (current_menu_choice >= menu_items_total) current_menu_choice -= menu_items_total;
-
+    
     asking_for_restart_confirmation = false;
     asking_for_quit_confirmation = false;
 }
@@ -99,29 +105,39 @@ static int draw_item(char *text, Dynamic_Font *font, int center_x, int y, Vector
     int index = num_menu_items_drawn;
     
     Vector4 item_color = MENU_COLOR_TEXT;
+    if (index == index_restart) {
+        if (globals.current_world == globals.menu_world) {
+            item_color = v4(0.4f, 0.4f, 0.4f, 1.0f);
+        }
+    }
     if (index == current_menu_choice) {
-        item_color = MENU_COLOR_HIGHLIGHT;//v4(1, 173/255.0f, 0, 1);
+        float pad_x = 20.0f;
+        float pad_y = font->character_height * 0.4f;
+        float text_width = font->get_string_width_in_pixels(text);
+        float rect_height = font->character_height * 1.4f;
 
-        Vector4 non_white = MENU_COLOR_HIGHLIGHT;//v4(1, 222/255.0f, 0, 1);
-        Vector4 white = v4(1, 1, 1, 1);
+        Vector4 bg_color = v4(1.0f, 0.85f, 0.4f, 0.15f);
+
+        set_shader(globals.shader_color);
+        
+        immediate_begin();
+        immediate_quad(
+            v2(x_pad - pad_x, y - pad_y),
+            v2(text_width + pad_x * 2, rect_height),
+            bg_color);
+        immediate_flush();
 
         double now = nanoseconds_to_seconds(globals.time_info.real_world_time);
-        double t = cos(now * 3.0);
-        t *= t;
+        double t = 0.5 + 0.5 * sin(now * 2.0);
+        t = 0.3 + 0.7 * t;
+        Vector4 animated_color = lerp(MENU_COLOR_HIGHLIGHT, v4(1, 0.9f, 0.5f, 1), (float)t);
 
-        t = .4 + .54 * t;
-        Vector4 backing_color = lerp(non_white, white, (float)t);
-
-        int offset = font->character_height / 40;
-#if 0
-        draw_text(font, text, center_x - width / 2 + offset, y - offset, item_color);
-        draw_text(font, text, center_x - width / 2, y, backing_color);
-#else
-        draw_text(font, text, x_pad, y - offset, item_color);
-        draw_text(font, text, x_pad, y, backing_color);
-#endif
+        set_shader(globals.shader_text);
+        
+        draw_text(font, text, x_pad, y - font->character_height * 0.05f, MENU_COLOR_SHADOW);
+        draw_text(font, text, x_pad, y, animated_color);
     } else {
-        //draw_text(font, text, center_x - width / 2, y, item_color);
+        set_shader(globals.shader_text);
         draw_text(font, text, x_pad, y, item_color);
     }
 

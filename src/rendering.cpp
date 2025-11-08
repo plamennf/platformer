@@ -14,7 +14,7 @@ Texture *load_texture_from_file(char *filepath) {
         return NULL;
     }
     defer { stbi_image_free(data); };
-
+    
     Texture *texture = make_texture();
     load_texture_from_data(texture, width, height, TEXTURE_FORMAT_RGBA8, data);
 

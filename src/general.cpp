@@ -295,7 +295,7 @@ void logprintf(char *fmt, ...) {
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
-#ifdef BUILD_DEBUG
+#if defined(BUILD_DEBUG) || defined(__EMSCRIPTEN__)
     fprintf(stdout, "%s", buf);
     fflush(stdout);
 #endif

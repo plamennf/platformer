@@ -582,6 +582,10 @@ inline u32 argb_color(Vector4 color) {
     return (ia << 24) | (ir << 16) | (ig << 8) | (ib << 0);
 }
 
+inline float linear_to_srgb(float c) {
+    return powf(c, 1.0f / 2.2f);
+}
+
 inline float length_squared(Vector4 v) {
     return v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w;
 }

@@ -14,12 +14,12 @@ void update_single_hero(Hero *hero, float dt) {
     assert(tilemap);
     
     float input_x = 0.0f;
-    if (is_key_down(SDL_SCANCODE_A)) { input_x -= 1.0f; hero->is_facing_right = false; }
-    if (is_key_down(SDL_SCANCODE_D)) { input_x += 1.0f; hero->is_facing_right = true; }
+    if (is_key_down(SDL_SCANCODE_A) || is_key_down(SDL_SCANCODE_LEFT)) { input_x -= 1.0f; hero->is_facing_right = false; }
+    if (is_key_down(SDL_SCANCODE_D) || is_key_down(SDL_SCANCODE_RIGHT)) { input_x += 1.0f; hero->is_facing_right = true; }
 
     hero->velocity.x = input_x * MOVE_SPEED;
 
-    if (is_key_down(SDL_SCANCODE_W) && hero->is_on_ground) {
+    if ((is_key_down(SDL_SCANCODE_W) || is_key_down(SDL_SCANCODE_SPACE) || is_key_down(SDL_SCANCODE_UP)) && hero->is_on_ground) {
         hero->velocity.y   = JUMP_FORCE;
         hero->is_on_ground = false;
         emit_jump_particles(world->particle_system, hero->position);

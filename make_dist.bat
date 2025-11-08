@@ -6,9 +6,14 @@ if exist dist rmdir /s /q dist
 if not exist dist mkdir dist
 
 call build.bat 0
+call build-web.bat
 
 REM Copy executable to dist
 copy build\vertune.exe dist\
+copy build\index.html dist\
+copy build\index.js dist\
+copy build\index.wasm dist\
+copy build\index.data dist\
 
 REM Optional: copy other assets (textures, fonts, etc.)
 copy assets.pak dist\

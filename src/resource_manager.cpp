@@ -93,3 +93,8 @@ Sound *find_or_load_sound(char *name, bool is_looping) {
     loaded_sounds.add(name, info);
     return sound;
 }
+
+void resource_manager_reset() {
+    loaded_sounds.deallocate();
+    loaded_textures.deallocate();
+}

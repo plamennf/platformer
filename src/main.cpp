@@ -13,6 +13,12 @@
 #include "icon_data.h"
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#else
+#include <GL/glew.h>
+#endif
 #include <stdio.h>
 
 #define NS_PER_SECOND 1000000000.0
@@ -33,6 +39,8 @@ struct Key_State {
 };
 
 static Key_State key_states[SDL_NUM_SCANCODES];
+
+static void toggle_fullscreen(SDL_Window *window);
 
 bool is_key_down(int key_code) {
     return key_states[key_code].is_down;
@@ -106,13 +114,15 @@ static void adjust_fps_cap_based_on_performance() {
 static void init_shaders() {
     globals.shader_color   = make_shader();
     load_shader(globals.shader_color, R"(
+precision highp float;
+
 OUT_IN vec4 v_color;
 
 #ifdef VERTEX_SHADER
 
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec4 a_color;
-layout(location = 2) in vec2 a_uv;
+in vec2 a_position;
+in vec4 a_color;
+in vec2 a_uv;
 
 uniform mat4 object_to_proj_matrix;
 
@@ -125,10 +135,14 @@ void main() {
 
 #ifdef FRAGMENT_SHADER
 
-layout(location = 0) out vec4 o_color;
+out vec4 o_color;
 
 void main() {
+#ifdef SGLES
+    o_color = vec4(pow(v_color.xyz, vec3(1.0 / 2.2)), 1.0);
+#else
     o_color = v_color;
+#endif
 }
 
 #endif
@@ -136,14 +150,16 @@ void main() {
     
     globals.shader_texture = make_shader();
     load_shader(globals.shader_texture, R"(
+precision highp float;
+
 OUT_IN vec4 v_color;
 OUT_IN vec2 v_uv;
 
 #ifdef VERTEX_SHADER
 
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec4 a_color;
-layout(location = 2) in vec2 a_uv;
+in vec2 a_position;
+in vec4 a_color;
+in vec2 a_uv;
 
 uniform mat4 object_to_proj_matrix;
 
@@ -157,13 +173,18 @@ void main() {
 
 #ifdef FRAGMENT_SHADER
 
-layout(location = 0) out vec4 o_color;
+out vec4 o_color;
 
 uniform sampler2D tex;
 
 void main() {
     vec4 tex_color = texture(tex, v_uv);
+
+#ifdef SGLES
+    o_color = vec4(pow(v_color.xyz * tex_color.xyz, vec3(1.0 / 2.2)), 1.0);
+#else
     o_color = v_color * tex_color;
+#endif
 }
 
 #endif
@@ -172,14 +193,16 @@ void main() {
     
     globals.shader_text    = make_shader();
     load_shader(globals.shader_text, R"(
+precision highp float;
+
 OUT_IN vec4 v_color;
 OUT_IN vec2 v_uv;
 
 #ifdef VERTEX_SHADER
 
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec4 a_color;
-layout(location = 2) in vec2 a_uv;
+in vec2 a_position;
+in vec4 a_color;
+in vec2 a_uv;
 
 uniform mat4 object_to_proj_matrix;
 
@@ -193,22 +216,76 @@ void main() {
 
 #ifdef FRAGMENT_SHADER
 
-layout(location = 0) out vec4 o_color;
+out vec4 o_color;
 
 uniform sampler2D tex;
 
+vec3 to_linear(vec3 c) {
+    return pow(c, vec3(2.2));
+}
+
+vec3 to_srgb(vec3 c) {
+    return pow(c, vec3(1.0/2.2));
+}
+
 void main() {
     vec4 tex_color = texture(tex, v_uv);
-    o_color = v_color * vec4(1.0, 1.0, 1.0, tex_color.r);
+    tex_color = vec4(1.0, 1.0, 1.0, tex_color.r);
+#ifdef SGLES
+    //vec3 linear_color = tex_color.rgb;
+    //linear_color = linear_color * tex_color.a + ;
+    o_color = vec4(pow(v_color.xyz, vec3(1.0 / 2.2)), 1.0);
+#else
+    o_color = v_color * tex_color;
+#endif
 }
 
 #endif
 )", "text");
 }
 
+static void load_assets() {
+    Texture *white_texture = make_texture();
+    u8 white_texture_data[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+    load_texture_from_data(white_texture, 1, 1, TEXTURE_FORMAT_RGBA8, white_texture_data);
+    
+    globals.full_heart    = find_or_load_texture("heart_full_16x16");
+    if (!globals.full_heart) globals.full_heart = white_texture;
+    
+    globals.half_heart    = find_or_load_texture("heart_half_16x16");
+    if (!globals.half_heart) globals.half_heart = white_texture;
+    
+    globals.empty_heart   = find_or_load_texture("heart_empty_16x16");
+    if (!globals.empty_heart) globals.empty_heart = white_texture;
+    
+    globals.restart_taken = find_or_load_texture("restart_taken");
+    if (!globals.restart_taken) globals.restart_taken = white_texture;
+    
+    globals.restart_available = find_or_load_texture("restart_available");
+    if (!globals.restart_available) globals.restart_available = white_texture;
+    
+    globals.menu_background_music = find_or_load_sound("menu-music", true);
+    globals.level_background_music = find_or_load_sound("level-music", true);
+    globals.coin_pickup_sfx    = find_or_load_sound("coin-pickup", false);
+    globals.level_complete_sfx = find_or_load_sound("level-completed", false);
+    globals.death_sfx = find_or_load_sound("death", false);
+    globals.jump_sfx = find_or_load_sound("jump", false);
+    globals.damage_sfx = find_or_load_sound("damage", false);
+    globals.enemy_kill_sfx = find_or_load_sound("enemy-kill", false);
+    globals.level_fail_sfx = find_or_load_sound("level-failed", false);
+
+    globals.menu_change_option = find_or_load_sound("menu-change-option", false);
+    globals.menu_select = find_or_load_sound("menu-select", false);
+    globals.exit_menu = find_or_load_sound("exit-menu", false);
+}
+
 static void init_framebuffer() {
     if (globals.window_width == 0 || globals.window_height == 0) return;
 
+#ifdef __EMSCRIPTEN__
+    globals.render_width  = globals.window_width;
+    globals.render_height = globals.window_height;
+#else
     int vaw = VIEW_AREA_WIDTH, vah = VIEW_AREA_HEIGHT;
     if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
         vaw = 16;
@@ -227,6 +304,7 @@ static void init_framebuffer() {
     }
     
     globals.offscreen_buffer = make_framebuffer(render_area.width, render_area.height);
+#endif
 }
 
 static void draw_debug_hud() {
@@ -249,27 +327,6 @@ static void draw_debug_hud() {
     int x = globals.render_width  - font->get_string_width_in_pixels(text);
     int y = globals.render_height - font->character_height - ((int)(0.08f * globals.render_height));
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
-}
-
-static void toggle_fullscreen(SDL_Window *window) {
-    Uint32 flags = SDL_GetWindowFlags(window);
-    bool is_fullscreen = (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
-
-    if (is_fullscreen) {
-        // Go back to windowed mode
-        SDL_SetWindowFullscreen(window, 0);
-        SDL_SetWindowBordered(window, SDL_TRUE);
-        SDL_SetWindowResizable(window, SDL_TRUE);
-        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-        // optional: SDL_SetWindowSize(window, 1280, 720);
-    } else {
-        // Go fullscreen (borderless desktop fullscreen)
-        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-        SDL_SetWindowBordered(window, SDL_FALSE);
-    }
-
-    SDL_GetWindowSize(window, &globals.window_width, &globals.window_height);
-    init_framebuffer();
 }
 
 static void respond_to_input() {
@@ -426,7 +483,7 @@ static void generate_random_level(World *world, int level_width, int level_heigh
 
             bool boost_coin = (rand() % 3 == 0);
             if (boost_coin) {
-                coin_y = plat.y + max_jump_height + 1.0f + rand() % 2;
+                coin_y = plat.y + max_jump_height + 3.0f + rand() % 2;
 
                 Enemy *enemy    = make_enemy(world);
                 enemy->position = v2(coin_x, plat.y + 1.5f);
@@ -599,8 +656,83 @@ static void draw_end_screen() {
     draw_text(font, text, x, y, v4(1, 1, 1, 1));
 }
 
+#ifdef __EMSCRIPTEN__
+
+EM_BOOL resize_callback(int event_type, const void *e, void *user_data) {
+    double w, h;
+    emscripten_get_element_css_size("canvas", &w, &h);
+
+    globals.window_width  = (int)w;
+    globals.window_height = (int)h;
+    globals.render_width  = globals.window_width;
+    globals.render_height = globals.window_height;
+    
+    set_viewport(0, 0, globals.render_width, globals.render_height);
+    
+    return EM_TRUE;
+}
+
+/*
+static void toggle_fullscreen(SDL_Window *window) {
+    EmscriptenFullscreenStrategy strategy;
+    memset(&strategy, 0, sizeof(strategy));
+    strategy.scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_ASPECT;
+    strategy.filteringMode = EMSCRIPTEN_FULLSCREEN_FILTERING_DEFAULT;
+    strategy.canvasResizedCallback = resize_callback;
+    strategy.canvasResizedCallbackUserData = NULL;
+
+    emscripten_request_fullscreen_strategy("#canvas", true, &strategy);
+}
+*/
+
+static void toggle_fullscreen(SDL_Window *window) {
+    Uint32 flags = SDL_GetWindowFlags(window);
+    bool is_fullscreen = (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
+
+    if (is_fullscreen) {
+        // Go back to windowed mode
+        SDL_SetWindowFullscreen(window, 0);
+        SDL_SetWindowBordered(window, SDL_TRUE);
+        SDL_SetWindowResizable(window, SDL_TRUE);
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+        // optional: SDL_SetWindowSize(window, 1280, 720);
+    } else {
+        // Go fullscreen (borderless desktop fullscreen)
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_SetWindowBordered(window, SDL_FALSE);
+    }
+
+    SDL_GetWindowSize(window, &globals.window_width, &globals.window_height);
+    init_framebuffer();
+}
+
+#else
+
+static void toggle_fullscreen(SDL_Window *window) {
+    Uint32 flags = SDL_GetWindowFlags(window);
+    bool is_fullscreen = (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
+
+    if (is_fullscreen) {
+        // Go back to windowed mode
+        SDL_SetWindowFullscreen(window, 0);
+        SDL_SetWindowBordered(window, SDL_TRUE);
+        SDL_SetWindowResizable(window, SDL_TRUE);
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+        // optional: SDL_SetWindowSize(window, 1280, 720);
+    } else {
+        // Go fullscreen (borderless desktop fullscreen)
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_SetWindowBordered(window, SDL_FALSE);
+    }
+
+    SDL_GetWindowSize(window, &globals.window_width, &globals.window_height);
+    init_framebuffer();
+}
+
+#endif
+
 static SDL_Window *create_window(int width, int height, char *title) {
-    Uint32 window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
+    Uint32 window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
@@ -610,8 +742,13 @@ static SDL_Window *create_window(int width, int height, char *title) {
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+#ifdef __EMSCRIPTEN__
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
 
     SDL_Window *window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, window_flags);
     if (!window) {
@@ -619,11 +756,31 @@ static SDL_Window *create_window(int width, int height, char *title) {
         return NULL;
     }
 
+    globals.gl_context = SDL_GL_CreateContext(window);
+    if (!globals.gl_context) {
+        logprintf("Failed to create opengl context!\n");
+        SDL_DestroyWindow(globals.window);
+        return NULL;
+    }
+    SDL_GL_MakeCurrent(globals.window, globals.gl_context);
+
+#ifndef __EMSCRIPTEN__
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        logprintf("Failed to initialize GLEW!\n");
+        return NULL;
+    }
+#endif
+    
 #ifndef OS_WINDOWS
     SDL_RWops *rw = SDL_RWFromMem(icon_bmp, icon_bmp_len);
     SDL_Surface *icon = SDL_LoadBMP_RW(rw, 1);
     SDL_SetWindowIcon(window, icon);
     SDL_FreeSurface(icon);
+#endif
+
+#ifdef __EMSCRIPTEN__
+    //emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, 0, false, resize_callback);
 #endif
     
     return window;
@@ -648,6 +805,92 @@ static void init_window_size(int *width, int *height) {
     } else if (*width > 0 && *height == -1) {
         *height = (int)(*width * (9.0 / 16.0));
     }
+}
+
+static void main_loop() {
+    globals.num_frames_since_startup++;
+        
+    if (globals.should_switch_worlds) {
+        bool should_restart_level = false;
+        if (globals.current_world) {
+            if (!globals.current_world->by_type._Hero ||
+                globals.current_world->by_type._Hero->health <= 0.0) {
+                should_restart_level = true;
+            }
+        }
+
+        if (should_restart_level) {
+            restart_current_world();
+        } else {
+            globals.current_level_width += 30;
+            switch_to_random_world(globals.current_level_width);
+            globals.num_worlds_completed++;
+        }
+
+        globals.should_switch_worlds = false;
+    }
+        
+    update_time();
+    adjust_fps_cap_based_on_performance();
+        
+    for (int i = 0; i < ArrayCount(key_states); i++) {
+        Key_State *state = &key_states[i];
+        state->was_down  = state->is_down;
+        state->changed   = false;
+    }
+
+    respond_to_input();
+
+    if (globals.program_mode == PROGRAM_MODE_GAME) {
+        update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
+
+        if (is_key_pressed(SDL_SCANCODE_ESCAPE)) {
+            toggle_menu();
+        } else if (is_key_pressed(SDL_SCANCODE_F)) {
+            globals.draw_debug_hud = !globals.draw_debug_hud;
+        }
+    }
+
+    update_menu_fade((float)globals.time_info.delta_time_seconds);
+        
+    if (globals.window_width > 0 && globals.window_height > 0) {
+#ifndef __EMSCRIPTEN__
+        set_framebuffer(globals.offscreen_buffer);
+#endif
+        set_viewport(0, 0, globals.render_width, globals.render_height);
+        set_shader(NULL);
+        
+        if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
+            draw_main_menu();
+        } else if (globals.program_mode == PROGRAM_MODE_GAME) {
+            draw_world(globals.current_world);
+            if (globals.draw_debug_hud) {
+                draw_debug_hud();
+            }
+        } else if (globals.program_mode == PROGRAM_MODE_END) {
+            if (globals.current_world) {
+                draw_world(globals.current_world, true);
+            }
+            draw_end_screen();
+        }
+
+        if (globals.menu_fade.active) {
+            draw_menu_fade_overlay();
+        }
+
+#ifndef __EMSCRIPTEN__
+        blit_framebuffer_to_back_buffer_with_letter_boxing(globals.offscreen_buffer);
+#endif
+    }
+        
+    swap_buffers();
+
+    s64 fps_cap_nanoseconds = 1000000000 / globals.time_info.fps_cap;
+
+    while (get_time_nanoseconds() <= globals.time_info.sync_last_time + fps_cap_nanoseconds) {
+        // @TODO: Maybe sleep.
+    }
+    globals.time_info.sync_last_time += fps_cap_nanoseconds;
 }
 
 int main(int argc, char *argv[]) {    
@@ -732,136 +975,31 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    Texture *white_texture = make_texture();
-    u8 white_texture_data[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    load_texture_from_data(white_texture, 1, 1, TEXTURE_FORMAT_RGBA8, white_texture_data);
-    
-    globals.full_heart    = find_or_load_texture("heart_full_16x16");
-    if (!globals.full_heart) globals.full_heart = white_texture;
-    
-    globals.half_heart    = find_or_load_texture("heart_half_16x16");
-    if (!globals.half_heart) globals.half_heart = white_texture;
-    
-    globals.empty_heart   = find_or_load_texture("heart_empty_16x16");
-    if (!globals.empty_heart) globals.empty_heart = white_texture;
-    
-    globals.restart_taken = find_or_load_texture("restart_taken");
-    if (!globals.restart_taken) globals.restart_taken = white_texture;
-    
-    globals.restart_available = find_or_load_texture("restart_available");
-    if (!globals.restart_available) globals.restart_available = white_texture;
-    
-    globals.menu_background_music = find_or_load_sound("menu-music", true);
-    globals.level_background_music = find_or_load_sound("level-music", true);
-    globals.coin_pickup_sfx    = find_or_load_sound("coin-pickup", false);
-    globals.level_complete_sfx = find_or_load_sound("level-completed", false);
-    globals.death_sfx = find_or_load_sound("death", false);
-    globals.jump_sfx = find_or_load_sound("jump", false);
-    globals.damage_sfx = find_or_load_sound("damage", false);
-    globals.enemy_kill_sfx = find_or_load_sound("enemy-kill", false);
-    globals.level_fail_sfx = find_or_load_sound("level-failed", false);
-
-    globals.menu_change_option = find_or_load_sound("menu-change-option", false);
-    globals.menu_select = find_or_load_sound("menu-select", false);
-    globals.exit_menu = find_or_load_sound("exit-menu", false);
+    load_assets();
     
     if (!create_menu_world()) return 1;
     globals.current_world = globals.menu_world;
     play_sound(globals.menu_background_music);
 
-    int current_level_width = globals.start_level_width;
+    globals.current_level_width = globals.start_level_width;
     //switch_to_random_world(current_level_width);
 
     globals.time_info.last_time = get_time_nanoseconds();
-    s64 last_time = get_time_nanoseconds();
+    globals.time_info.sync_last_time = get_time_nanoseconds();
+
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(main_loop, 0, 1);
+#else
     while (!globals.should_quit_game) {
-        globals.num_frames_since_startup++;
-        
-        if (globals.should_switch_worlds) {
-            bool should_restart_level = false;
-            if (globals.current_world) {
-                if (!globals.current_world->by_type._Hero ||
-                    globals.current_world->by_type._Hero->health <= 0.0) {
-                    should_restart_level = true;
-                }
-            }
-
-            if (should_restart_level) {
-                restart_current_world();
-            } else {
-                current_level_width += 30;
-                switch_to_random_world(current_level_width);
-                globals.num_worlds_completed++;
-            }
-
-            globals.should_switch_worlds = false;
-        }
-        
-        update_time();
-        adjust_fps_cap_based_on_performance();
-        
-        for (int i = 0; i < ArrayCount(key_states); i++) {
-            Key_State *state = &key_states[i];
-            state->was_down  = state->is_down;
-            state->changed   = false;
-        }
-
-        respond_to_input();
-
-        if (globals.program_mode == PROGRAM_MODE_GAME) {
-            update_world(globals.current_world, (float)globals.time_info.delta_time_seconds);
-
-            if (is_key_pressed(SDL_SCANCODE_ESCAPE)) {
-                toggle_menu();
-            } else if (is_key_pressed(SDL_SCANCODE_F)) {
-                globals.draw_debug_hud = !globals.draw_debug_hud;
-            }
-        }
-
-        update_menu_fade((float)globals.time_info.delta_time_seconds);
-        
-        if (globals.window_width > 0 && globals.window_height > 0) {
-            set_framebuffer(globals.offscreen_buffer);
-            set_viewport(0, 0, globals.render_width, globals.render_height);
-            set_shader(NULL);
-
-            if (globals.program_mode == PROGRAM_MODE_MAIN_MENU) {
-                draw_main_menu();
-            } else if (globals.program_mode == PROGRAM_MODE_GAME) {
-                draw_world(globals.current_world);
-                if (globals.draw_debug_hud) {
-                    draw_debug_hud();
-                }
-            } else if (globals.program_mode == PROGRAM_MODE_END) {
-                if (globals.current_world) {
-                    draw_world(globals.current_world, true);
-                }
-                draw_end_screen();
-            }
-
-            if (globals.menu_fade.active) {
-                draw_menu_fade_overlay();
-            }
-
-            blit_framebuffer_to_back_buffer_with_letter_boxing(globals.offscreen_buffer);
-        }
-        
-        swap_buffers();
-
-        s64 fps_cap_nanoseconds = 1000000000 / globals.time_info.fps_cap;
-
-        while (get_time_nanoseconds() <= last_time + fps_cap_nanoseconds) {
-            // @TODO: Maybe sleep.
-        }
-        last_time += fps_cap_nanoseconds;
+        main_loop();
     }
-
+#endif
+    
     save_audio_settings();
     save_highscores();
     
     return 0;
 }
-
 
 void start_menu_fade(World *world) {
     globals.menu_fade.active = true;

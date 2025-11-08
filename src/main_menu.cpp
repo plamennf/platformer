@@ -337,7 +337,11 @@ static void draw_controls() {
 static void draw_slider(int x, int y, float value, float max_value, float width, float height, Vector4 knob_color) {
     set_shader(globals.shader_color);
 
+#ifdef __EMSCRIPTEN__
+    Vector4 grey_color = v4(0.55f, 0.55f, 0.55f, 1.0f);
+#else
     Vector4 grey_color = v4(0.4f, 0.4f, 0.4f, 1.0f);
+#endif
     
     immediate_begin();
     immediate_quad(v2((float)x, (float)y), v2(width, height), grey_color);
@@ -559,9 +563,11 @@ void draw_main_menu() {
             draw_y_offset_for_highscores_due_to_scrolling = 0.0f;
         }
 
-        float bottom = -(float)bottom_y_after_drawing_highscores;
-        if (draw_y_offset_for_highscores_due_to_scrolling > bottom) {
-            draw_y_offset_for_highscores_due_to_scrolling = bottom;
+        if (bottom_y_after_drawing_highscores < 0) {
+            float bottom = -(float)bottom_y_after_drawing_highscores;
+            if (draw_y_offset_for_highscores_due_to_scrolling > bottom) {
+                draw_y_offset_for_highscores_due_to_scrolling = bottom;
+            }
         }
     } else {
         if (is_key_pressed(SDL_SCANCODE_UP))   advance_menu_choice(-1);

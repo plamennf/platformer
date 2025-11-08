@@ -2,7 +2,12 @@
 
 #include "rendering.h"
 
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>
+#include <emscripten.h>
+#else
 #include <GL/glew.h>
+#endif
 
 struct Texture {
     int width;
@@ -52,21 +57,7 @@ static GLuint immediate_vbo;
 
 bool init_rendering(SDL_Window *_window, bool vsync) {
     window = _window;
-
-    globals.gl_context = SDL_GL_CreateContext(window);
-    if (!globals.gl_context) {
-        logprintf("Failed to create opengl context!\n");
-        SDL_DestroyWindow(globals.window);
-        return false;
-    }
-    SDL_GL_MakeCurrent(globals.window, globals.gl_context);
-
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        logprintf("Failed to initialize GLEW!\n");
-        return false;
-    }
-
+    
     if (vsync) {
         SDL_GL_SetSwapInterval(1);
         logprintf("vsync: on\n");
@@ -79,8 +70,10 @@ bool init_rendering(SDL_Window *_window, bool vsync) {
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
+#ifndef __EMSCRIPTEN__
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(GL_MULTISAMPLE);
+#endif
 
     glGenBuffers(1, &immediate_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, immediate_vbo);
@@ -176,7 +169,11 @@ void release_texture(Texture *texture) {
 
 static GLenum tf_to_gl_internal_format(Texture_Format format) {
     switch (format) {
+#ifdef __EMSCRIPTEN__
+        case TEXTURE_FORMAT_RGBA8: return GL_RGBA8;
+#else
         case TEXTURE_FORMAT_RGBA8: return GL_SRGB8_ALPHA8;
+#endif
         case TEXTURE_FORMAT_R8:    return GL_R8;
     }
 
@@ -239,6 +236,8 @@ void set_texture(int slot, Texture *texture, bool point_sample) {
     }
 }
 
+#ifndef __EMSCRIPTEN__
+
 Framebuffer *make_framebuffer(int width, int height) {
     Framebuffer *framebuffer = (Framebuffer *)malloc(sizeof(*framebuffer));
 
@@ -299,7 +298,16 @@ void set_framebuffer(Framebuffer *framebuffer) {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->fbo_id);
 }
 
+#endif
+
 void clear_framebuffer(float r, float g, float b, float a) {
+#ifdef __EMSCRIPTEN__
+    r = linear_to_srgb(r);
+    g = linear_to_srgb(g);
+    b = linear_to_srgb(b);
+    a = linear_to_srgb(a);
+#endif
+    
     glClearColor(r, g, b, a);
     glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -435,7 +443,11 @@ bool load_shader(Shader *shader, char *file_data, char *filepath) {
     }
     
     char *vertex_source[] = {
+#ifdef __EMSCRIPTEN__
+        "#version 300 es\n#define VERTEX_SHADER\n#define OUT_IN out\n#define SGLESS\n#line 1 1\n",
+#else
         "#version 330 core\n#define VERTEX_SHADER\n#define OUT_IN out\n#line 1 1\n",
+#endif
         file_data
     };
 
@@ -453,7 +465,11 @@ bool load_shader(Shader *shader, char *file_data, char *filepath) {
     }
 
     char *fragment_source[] = {
+#ifdef __EMSCRIPTEN__   
+        "#version 300 es\n#define FRAGMENT_SHADER\n#define OUT_IN in\n#define SGLESS\n#line 1 1\n",
+#else
         "#version 330 core\n#define FRAGMENT_SHADER\n#define OUT_IN in\n#line 1 1\n",
+#endif
         file_data
     };
 
@@ -472,6 +488,11 @@ bool load_shader(Shader *shader, char *file_data, char *filepath) {
     GLuint p = glCreateProgram();
     glAttachShader(p, v);
     glAttachShader(p, f);
+
+    glBindAttribLocation(p, 0, "a_position");
+    glBindAttribLocation(p, 1, "a_color");
+    glBindAttribLocation(p, 2, "a_uv");
+    
     glLinkProgram(p);
     glGetProgramiv(p, GL_LINK_STATUS, &success);
     if (!success) {

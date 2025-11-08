@@ -40,6 +40,7 @@ enum Program_Mode {
 
 struct Time_Info {
     s64 last_time = 0;
+    s64 sync_last_time = 0;
 
     s64 real_world_time = 0;
     s64 delta_time = 0;
@@ -125,7 +126,8 @@ struct Global_Variables {
     float music_volume = 1.0f;
 
     Array <int> highscores;
-
+    int current_level_width = 20;
+    
 #ifdef USE_PACKAGE
     Package package;
 #endif

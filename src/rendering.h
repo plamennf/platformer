@@ -52,11 +52,13 @@ Texture *load_texture_from_file(char *filepath);
 void update_texture(Texture *texture, int x, int y, int width, int height, u8 *data);
 void set_texture(int slot, Texture *texture, bool point_sample = true);
 
+#ifndef __EMSCRIPTEN__
 struct Framebuffer;
 Framebuffer *make_framebuffer(int width, int height);
 void release_framebuffer(Framebuffer *framebuffer);
 void blit_framebuffer_to_back_buffer_with_letter_boxing(Framebuffer *framebuffer);
 void set_framebuffer(Framebuffer *framebuffer);
+#endif
 void clear_framebuffer(float r, float g, float b, float a);
 
 void immediate_begin();

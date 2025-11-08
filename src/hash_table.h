@@ -106,6 +106,29 @@ struct String_Hash_Table {
     int allocated = 0;
     int count = 0;
 
+    inline void deallocate() {
+        for (int i = 0; i < allocated; i++) {
+            if (!occupancy_mask[i]) continue;
+
+            if (buckets[i].key) {
+                free(buckets[i].key);
+            }
+        }
+        
+        if (buckets) {
+            free(buckets);
+            buckets = NULL;
+        }
+
+        if (occupancy_mask) {
+            free(occupancy_mask);
+            occupancy_mask = NULL;
+        }
+
+        allocated = 0;
+        count = 0;
+    }
+    
     inline void grow() {
         const int HASH_TABLE_INITIAL_CAPACITY = 256;
 

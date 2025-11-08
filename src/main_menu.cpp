@@ -242,6 +242,8 @@ static void draw_menu_choices() {
     index_settings = draw_item("Settings", font, center_x, cursor_y, start_color);
     cursor_y -= stride;
 
+#ifndef __EMSCRIPTEN__
+    
     //
     // Menu item: Highscores
     //
@@ -257,6 +259,8 @@ static void draw_menu_choices() {
     if (asking_for_quit_confirmation) text = "Quit? Are you sure?";
     index_quit = draw_item(text, font, center_x, cursor_y, start_color);
 
+#endif
+    
     menu_items_total = num_menu_items_drawn;
     num_menu_items_drawn = 0;
 }

@@ -955,16 +955,23 @@ int main(int argc, char *argv[]) {
         toggle_fullscreen(globals.window);
     }
 
+#ifdef __EMSCRIPTEN__
+    globals.master_volume = 0.5f;
+        globals.music_volume = 1.0f;
+        globals.sfx_volume = 1.0f;
+#else
     if (!load_audio_settings()) {
         globals.master_volume = 0.5f;
         globals.music_volume = 1.0f;
         globals.sfx_volume = 1.0f;
     }
-
+#endif
+    
 #ifdef BUILD_DEBUG
     for (int i = 0; i < 10; i++) {
         globals.highscores.add(100);
     }
+#elif defined(__EMSCRIPTEN__)
 #else
     load_highscores();
 #endif
@@ -994,9 +1001,11 @@ int main(int argc, char *argv[]) {
         main_loop();
     }
 #endif
-    
+
+#ifndef __EMSCRIPTEN__
     save_audio_settings();
     save_highscores();
+#endif
     
     return 0;
 }

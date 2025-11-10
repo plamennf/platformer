@@ -1,20 +1,62 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>Vertune</title>
-  <style>
-    html, body { margin:0; padding:0; height:100%; width:100%; overflow:hidden; }
-    #canvas { display:block; width:100%; height:100%; }
-  </style>
-</head>
-<body>
-  <canvas id="canvas"></canvas>
-  <script>
-    var Module = {
-      canvas: (function() { return document.getElementById('canvas'); })()
-    };
-  </script>
-  {{{ SCRIPT }}}
-</body>
+  <head>
+    <meta charset="utf-8">
+    <title>Vertune</title>
+    <style>
+      html, body { margin:0; padding:0; height:100%; width:100%; overflow:hidden; }
+      #canvas, #loadingCanvas { display:block; width:100%; height:100%; }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <canvas id="loadingCanvas"></canvas>
+    <script>
+      // Draw "Loading..." on canvas before the module starts
+      const mainCanvas = document.getElementById('canvas');
+      const loadingCanvas = document.getElementById('loadingCanvas');
+      const ctx = loadingCanvas.getContext('2d');
+      
+      function drawLoadingText(text) {
+          // Match canvas resolution to its display size
+          loadingCanvas.width = loadingCanvas.clientWidth;
+          loadingCanvas.height = loadingCanvas.clientHeight;
+
+          ctx.clearRect(0, 0, loadingCanvas.width, loadingCanvas.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '24px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, loadingCanvas.width / 2, loadingCanvas.height / 2);
+      }
+
+      drawLoadingText('Loading... 0%');
+      
+      var Module = {
+          canvas: mainCanvas,
+
+          setStatus: function(text) {
+              if (!text) return;
+              
+              const match = text.match(/\((\d+)\/(\d+)\)/);
+              let percentText = 'Loading...';
+              if (match) {
+                  const percent = Math.round((parseInt(match[1]) / parseInt(match[2])) * 100);
+                  percentText = `Loading... ${percent}%`;
+              } else if (text === 'Running...') {
+                  percentText = 'Starting game...';
+              }
+              
+              drawLoadingText(percentText);
+          },
+          
+          onRuntimeInitialized: function() {
+              loadingCanvas.style.transition = 'opacity 0.5s';
+              loadingCanvas.style.opacity = '0';
+              setTimeout(() => loadingCanvas.remove(), 600);
+          },
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
 </html>

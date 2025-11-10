@@ -758,9 +758,21 @@ static SDL_Window *create_window(int width, int height, char *title) {
 
     globals.gl_context = SDL_GL_CreateContext(window);
     if (!globals.gl_context) {
+#ifdef __EMSCRIPTEN__
+        logprintf("WebGL2 failed, trying WebGL1 (ES2)...\n");
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+        globals.gl_context = SDL_GL_CreateContext(window);
+        if (!globals.gl_context) {
+            logprintf("Failed to create opengl context!\n");
+        SDL_DestroyWindow(globals.window);
+        return NULL;
+        }
+#else
         logprintf("Failed to create opengl context!\n");
         SDL_DestroyWindow(globals.window);
         return NULL;
+#endif
     }
     SDL_GL_MakeCurrent(globals.window, globals.gl_context);
 

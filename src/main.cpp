@@ -428,7 +428,9 @@ static void generate_random_level(World *world, int level_width, int level_heigh
             first_platform = false;
         } else {
             int max_y = last_y + (int)max_jump_height;
+            max_y = Min(max_y, level_height - 4);
             int min_y = Max(2, last_y - (int)max_jump_height);
+            min_y = Min(min_y, max_y);
             y = min_y + rand() % (max_y - min_y + 1);
         }
 
